@@ -1,0 +1,111 @@
+
+import os
+import json
+from constants import FILE_VCM_TASK
+from sim.sim_manager import SimManager
+from item.regr_item import RegrItem
+from utils.utils_env import check_sim_single_function_result, check_sim_single_timing_result
+import subprocess
+
+def process_single_sim_info(args, sim_manager, sim_info, post_flag):
+  sim_id = sim_info.get("sim_id")
+  job_id = sim_info.get("job_id")
+  sim_log = sim_info.get("sim_log")
+
+  tim_result = 0
+  fun_result = check_sim_single_function_result(sim_log)
+  if post_flag:
+    tim_result = check_sim_single_timing_result(sim_log)
+
+  if fun_result is None or tim_result is None:
+    print(f"[VCM] Warning: sim_id '{sim_id}' has no function or timing result, skipping.")
+    sim_info["status"] = "CheckFail"
+    return
+  else:
+    print(f"[VCM] sim_id '{sim_id}' function result: {fun_result}, timing result: {tim_result}")
+
+  sim_info["status"] = "CheckFail"
+  total_result = fun_result + tim_result
+  if job_id == 0 or job_id is None:
+    if args.sim_time is None:
+      print(f"[VCM] Error: sim_time is not provided.")
+      sim_time = 0
+    else:
+      sim_time = args.sim_time
+  else:
+    sim_time = get_job_elapsed_time(job_id)
+  if sim_time is None:
+    print(f"[VCM] Warning: sim_id '{sim_id}' has no elapsed time, skipping.")
+    return
+  else:
+    sim_info["status"] = "CheckDone"
+    if total_result == 0:
+      sim_manager.update_sim_time_pass(sim_id, sim_time, fun_result, tim_result, True)
+    else:
+      sim_manager.update_sim_time_pass(sim_id, sim_time, fun_result, tim_result, False)
+      print(f"[VCM] sim_id '{sim_id}' has error in function or timing result. at {sim_log}")
+  return sim_info
+
+def get_job_elapsed_time(job_id):
+  # 调用 sacct 命令
+  result = subprocess.run(
+    ['sacct', '-j', str(job_id), '--format=Elapsed', '--noheader'],
+    capture_output=True,
+    text=True
+  )
+
+  # 获取输出并处理，只取第一行
+  elapsed_time = result.stdout.strip().splitlines()[0] if result.stdout.strip() else ''
+  
+  # 将时间转换为秒
+  if elapsed_time:
+    # 处理不同格式的时间
+    parts = elapsed_time.split(':')
+    if len(parts) == 3:  # HH:MM:SS
+      hours, minutes, seconds = map(int, parts)
+      total_seconds = hours * 3600 + minutes * 60 + seconds
+    elif len(parts) == 2:  # MM:SS
+      minutes, seconds = map(int, parts)
+      total_seconds = minutes * 60 + seconds
+    elif len(parts) == 1:  # SS
+      total_seconds = int(parts[0])
+    else:
+      total_seconds = 0
+    
+    return total_seconds
+  else:
+    return None  # 作业可能不存在或没有执行时间
+  
+def handle_sim_time_pass(cursor, args):
+  sim_manager = SimManager(cursor)
+
+  if os.path.basename(os.getcwd()) != "slurm":
+    print("[VCM] Error: Current directory must be 'slurm'.")
+    return
+
+  regr_item = RegrItem.load_from_json()
+  task_dicts = regr_item.get_tasks()
+  if not task_dicts:
+    print("[VCM] Error: No task data found in regr_item.")
+    return
+  sim_dicts = regr_item.get_sims()
+  if not sim_dicts:
+    print("[VCM] Error: No simulation data found in regr_item.")
+    return
+  
+  # get post
+  if task_dicts[0].get("status_post") == "False" or task_dicts[0].get("status_post") == "None":
+    post_flag = False
+  else:
+    post_flag = True
+  
+  for sim_info in sim_dicts:
+    sim_info = process_single_sim_info(args, sim_manager, sim_info, post_flag)
+
+  # 更新SimItem
+  regr_item.set_sims(sim_dicts)
+  regr_item.save_to_json()
+
+
+      
+

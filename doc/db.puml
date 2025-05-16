@@ -1,0 +1,35 @@
+@startuml
+
+package "projects" {
+  [project_id]
+}
+
+package "modules" {
+  [module_id]
+}
+
+package "cases" {
+  [case_id]
+}
+
+package "regrs" {
+  [regr_id]
+}
+
+package "tasks" {
+  [task_id]
+}
+
+package "sims" {
+  [sim_id]
+}
+
+[module_id] <-- [project_id]
+[case_id] <-- [module_id]
+[regr_id] <-- [module_id]
+[task_id] <-- [module_id]
+[task_id] <-- [regr_id]
+[sim_id] <-- [case_id]
+[sim_id] <-- [task_id]
+
+@enduml

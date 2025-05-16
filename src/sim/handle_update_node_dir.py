@@ -1,0 +1,107 @@
+import os
+import json
+from constants import NODE_MAP, FILE_VCM_TASK
+from sim.sim_manager import SimManager
+from item.regr_item import RegrItem
+
+def get_regr_node_name(status_log_path="status_check.log"):
+  jobid_sim_map = {}
+
+  if not os.path.exists(status_log_path):
+    print(f"[VCM] Error: Log file '{status_log_path}' not found.")
+    return
+
+  with open(status_log_path, 'r') as file:
+    for line in file:
+      parts = line.split()
+      if len(parts) < 5:
+        print("[VCM] Error: Incomplete line in status log, skipping.")
+        continue
+
+      job_id = parts[1]
+      if "PENDING" in line:
+        node_name = "pending"
+        case_name = parts[4]
+        status = "PENDING"
+      elif "FAILED" in line or "CANCELLED" in line or "TIMEOUT" in line:
+        node_name = "default_node"
+        case_name = parts[4]
+        status = "FAILED"
+      elif "COMPLETED" in line:
+        node_name = parts[3]
+        case_name = parts[4]
+        status = "OK"
+      elif "CONFIGURING" in line or "COMPLETING" in line or "RUNNING" in line or "PREEMPTED" in line:
+        node_name = parts[3]
+        case_name = parts[4]
+        status = "RUNNING"
+      else:
+        continue
+      jobid_sim_map[job_id] = {
+        "node_name": node_name,
+        "case_name": case_name,
+        "status": status
+      }
+  return jobid_sim_map
+
+def get_regr_sim_log_path(node_name, user_name, work_name, case_name, case_seed):
+  node_dir = "/" + NODE_MAP.get(node_name)
+  case_name_seed = case_name + "_" + case_seed
+  sim_log_name = case_name_seed + ".log"
+  file_path = os.path.join(
+    node_dir, "work", user_name , work_name, "regr", case_name, case_name_seed, sim_log_name
+    )
+  return file_path
+
+def handle_update_node_dir(cursor, args):
+  sim_manager = SimManager(cursor)
+
+  if os.path.basename(os.getcwd()) != "slurm":
+    print("[VCM] Error: Current directory must be 'slurm'.")
+    return
+
+  regr_item = RegrItem.load_from_json()
+  sim_dicts = regr_item.get_sims()
+  if not sim_dicts:
+    print("[VCM] Error: No simulation data found in regr_item.")
+    return
+  
+  node_sim_map = get_regr_node_name()
+  if not node_sim_map:
+    print("[VCM] Error: Unable to parse node name or simulation directory from log.")
+    return
+
+  for sim_info in sim_dicts:
+    sim_id = sim_info.get("sim_id")  # 假设 sim_id 存在于 sim_info 里
+    job_id = sim_info.get("job_id")
+    if not job_id:
+      print(f"[VCM] Warning: sim_id '{sim_id}' has no job_id, skipping.")
+      continue
+  
+    node_info = node_sim_map.get(job_id)
+    if not node_info:
+      print(f"[VCM] Warning: job_id '{job_id}' not found in node_sim_map, skipping.")
+      continue
+  
+    status = node_info["status"]
+    node_name = node_info["node_name"]
+    case_name = node_info["case_name"]
+  
+    if status == "OK":
+      case_seed = sim_info.get("case_seed")
+      sim_log_path = get_regr_sim_log_path(
+        node_name, regr_item.current_user, regr_item.work_name, case_name, case_seed
+      )
+      if os.path.exists(sim_log_path):
+        sim_info["sim_log"] = sim_log_path
+        sim_info["status"] = "TODO"
+        print(f"[VCM] sim_id '{sim_id}' (job_id '{job_id}'): Updated simulation log path to '{sim_log_path}'.")
+      else:
+        print(f"[VCM] sim_id '{sim_id}' (job_id '{job_id}'): Simulation log file '{sim_log_path}' not found.")
+    else:
+      print(f"[VCM] sim_id '{sim_id}' (job_id '{job_id}'): Status is '{status}', not update.")
+
+  # 写回 regr_item 并保存
+  regr_item.set_sims(sim_dicts)
+  regr_item.save_to_json()
+  print("[VCM] Simulation info updated and saved to regr_item.")
