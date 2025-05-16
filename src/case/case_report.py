@@ -1,9 +1,9 @@
 from tabulate import tabulate
-from utils.utils_lib import fetch_with_headers
+from utils.utils_format import fetch_with_headers
 from case.case_manager import CaseManager
 from module.module_manager import ModuleManager
 from constants import get_real_time
-from utils.utils_lib import print_table
+from utils.utils_format import print_table
 
 def generate_case_report(cursor, module_name: str) -> None:
   """

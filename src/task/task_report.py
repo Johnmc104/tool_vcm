@@ -1,6 +1,6 @@
 from module.module_manager import ModuleManager
 from constants import get_real_time
-from utils.utils_lib import print_table
+from utils.utils_format import print_table
 
 def print_tasks_table(cursor, tasks):
   """

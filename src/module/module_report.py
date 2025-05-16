@@ -1,7 +1,7 @@
 from tabulate import tabulate
 from project.project_manager import ProjectManager
 from constants import get_real_time
-from utils.utils_lib import print_table
+from utils.utils_format import print_table
 
 def print_modules_table(cursor, modules):
   """

@@ -1,6 +1,5 @@
 
-import random
-from utils.utils_lib import fetch_with_headers
+from utils.utils_format import fetch_with_headers
 
 class SimManager:
   def __init__(self, cursor):

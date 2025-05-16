@@ -1,9 +1,9 @@
+from tabulate import tabulate
 from constants import get_current_user
+from module.module_manager import ModuleManager
 from case.case_manager import CaseManager
 from sim.sim_manager import SimManager
-from module.module_manager import ModuleManager
-from utils.utils_lib import generate_html_report_with_chart
-from tabulate import tabulate
+from utils.utils_format import generate_html_report_with_chart
 from utils.utils_git import get_project_name, get_module_name
 
 def handle_list_sim_info(cursor, args):

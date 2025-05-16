@@ -31,6 +31,12 @@ def get_real_time(db_time, utc: int = 8):
   bj_dt = utc_dt + datetime.timedelta(utc)
   return bj_dt.strftime("%Y-%m-%d %H:%M:%S")
 
+def check_vtool_home():
+  vtool_home = os.getenv("VTOOL_HOME")
+  if not vtool_home:
+    raise EnvironmentError("Environment variable VTOOL_HOME is not set.")
+  return vtool_home
+
 NODE_MAP = {
   "digit01": "home_d1",
   "digit02": "home_d2",

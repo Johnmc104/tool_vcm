@@ -1,7 +1,6 @@
 from tabulate import tabulate
-from project.project_manager import ProjectManager
-from utils.utils_lib import fetch_with_headers, print_table
 from constants import get_real_time
+from utils.utils_format import fetch_with_headers, print_table
 
 def generate_project_report(cursor, project_name: str):
   """

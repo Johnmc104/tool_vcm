@@ -1,5 +1,5 @@
 from module.module_manager import ModuleManager
-from utils.utils_lib import print_table
+from utils.utils_format import print_table
 
 def print_regrs_table(cursor, regrs, max_count=None):
   """

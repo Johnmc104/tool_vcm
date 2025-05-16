@@ -3,6 +3,7 @@ import re
 import random
 from glob import glob
 from constants import NODE_MAP, get_current_user,get_current_dir, VCM_TASK_FILENAME
+from constants import check_vtool_home
 
 def determine_regr_type(logger):
   """
@@ -71,10 +72,9 @@ def get_comp_corner(logger, comp_log_path="comp.log"):
   logger.log(f"[VCM] Corner name not found in comp.log.", level="WARNING")
   return None
 
+
 def check_sim_single_function_result(log_file='sim.log', exception_file='log_exception'):
-  vtool_home = os.getenv("VTOOL_HOME")
-  if not vtool_home:
-    raise EnvironmentError("Environment variable VTOOL_HOME is not set.")
+  vtool_home = check_vtool_home()
     
   # 定义异常文件路径
   exception_file_path = os.path.join(vtool_home, 'tool', 'log', exception_file)
