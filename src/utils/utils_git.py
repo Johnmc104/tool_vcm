@@ -56,8 +56,8 @@ def get_git_info():
     if status_output:
       print("[VCM] Warning: There are uncommitted changes in the repository:")
       print(status_output)
-  except subprocess.CalledProcessError:
-    print("[VCM] Error: Failed to get git status.")
+  except subprocess.CalledProcessError as e:
+    print(f"[VCM] Error: Failed to get git status. {e}")
 
   return git_de, git_dv
 
@@ -76,7 +76,8 @@ def get_module_name_from_git():
     )
     git_name = os.path.basename(repo_path)
     return git_name.upper()
-  except subprocess.CalledProcessError:
+  except subprocess.CalledProcessError as e:
+    print(f"[VCM] Error: Unable to get module name from git. {e}")
     return None
     
 def get_project_name_from_git():
@@ -93,8 +94,9 @@ def get_project_name_from_git():
     or module_name.startswith("M")
   ):
     parts = module_name.split("_")
-    if len(parts) > 1:
+    if parts:
       return parts[0].upper()
+  print("[VCM] Warning: Module name does not match expected project prefix.")
   return None
 
 def get_project_and_module_name_from_git():
@@ -120,9 +122,8 @@ def get_project_and_module_name_from_git():
 
   if module_name and project_name:
     return project_name, module_name
-  else:
-    print("[VCM] Warning: Unable to determine project or module name from git.")
-    return None, None
+  print("[VCM] Warning: Unable to determine project or module name from git.")
+  return None, None
   
 def get_project_name(args):
   """
@@ -135,10 +136,10 @@ def get_project_name(args):
     str or None: 项目名（大写），获取失败时返回None。
   """
   if hasattr(args, "project_name") and args.project_name:
-    return args.project_name
+    return args.project_name.upper()
   
   project_name = get_project_name_from_git()
-  
+
   if not project_name:
     print("[VCM] Error: Unable to determine project name from Git repository.")
     return None
@@ -155,7 +156,7 @@ def get_module_name(args):
     str or None: 模块名（大写），获取失败时返回None。
   """
   if hasattr(args, "module_name") and args.module_name:
-    return args.module_name
+    return args.module_name.upper()
   
   module_name = get_module_name_from_git()
   

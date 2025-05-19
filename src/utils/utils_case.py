@@ -3,58 +3,70 @@ import re
 from typing import List
 
 def find_case_uvm_dir():
+  """
+  功能描述:
+    查找当前目录或父目录下的 case_uvm 文件夹路径。
+
+  参数:
+    无
+
+  返回值:
+    str 或 None: 返回 case_uvm 文件夹的绝对路径，未找到则返回 None。
+  """
   current_dir = os.getcwd()
   parent_dir = os.path.dirname(current_dir)
-  case_uvm_current = os.path.join(current_dir, "case_uvm")
-  case_uvm_parent = os.path.join(parent_dir, "case_uvm")
-  if os.path.isdir(case_uvm_current):
-    return case_uvm_current
-  elif os.path.isdir(case_uvm_parent):
-    return case_uvm_parent
-  else:
-    print(
-      "[VCM] Error, case_uvm folder not found in current or parent directory."
-    )
-    return None
+  for path in [os.path.join(current_dir, "case_uvm"), os.path.join(parent_dir, "case_uvm")]:
+    if os.path.isdir(path):
+      return path
+  print("[VCM] Error, case_uvm folder not found in current or parent directory.")
+  return None
 
 def find_case_sw_info(case_name):
+  """
+  功能描述:
+    查找指定 case_name 的 SystemVerilog 文件，并提取 group_name 和 case_c_name。
+
+  参数:
+    case_name (str): 用例名称。
+
+  返回值:
+    tuple: (group_name, case_c_name)，均为 str 或 None。
+  """
   target_dir = find_case_uvm_dir()
   if not target_dir or not os.path.isdir(target_dir):
     print(f"[VCM] Error, {target_dir} folder not exists")
     return None, None
 
   for root, _, files in os.walk(target_dir):
-    for file in files:
-      if file == f"{case_name}.sv":
-        file_path = os.path.join(root, file)
-        with open(file_path, "r") as f:
-          content = f.read()
-        class_match = re.search(r"class\s+(\w+)\s+extends", content)
-        params_match = re.search(r'bin\("([^"]*)".*?"([^"]*)"', content)
-        if class_match and class_match.group(1) == case_name:
-          group_name = params_match.group(1) if params_match else None
-          case_c_name = params_match.group(2) if params_match else None
-          print(
-            f"[VCM] Group_Name: {group_name}, Case_Name: {case_c_name}"
-          )
-          return group_name, case_c_name
-        else:
-          print(
-            f"[VCM] Error, class_name not found in file: {file_path}"
-          )
-
+    if f"{case_name}.sv" in files:
+      file_path = os.path.join(root, f"{case_name}.sv")
+      with open(file_path, "r") as f:
+        content = f.read()
+      class_match = re.search(r"class\s+(\w+)\s+extends", content)
+      params_match = re.search(r'bin\("([^"]*)".*?"([^"]*)"', content)
+      if class_match and class_match.group(1) == case_name:
+        group_name = params_match.group(1) if params_match else None
+        case_c_name = params_match.group(2) if params_match else None
+        print(f"[VCM] Group_Name: {group_name}, Case_Name: {case_c_name}")
+        return group_name, case_c_name
+      else:
+        print(f"[VCM] Error, class_name not found in file: {file_path}")
   return None, None
 
 def find_case_hw_info(file_path: str = "sim.log"):
   """
-  从仿真日志文件首行提取用例名称和随机种子。
+  功能描述:
+    从仿真日志文件首行提取用例名称和随机种子。
 
   参数:
-    file_path (str): 日志文件路径，默认"sim.log"。
+    file_path (str): 日志文件路径，默认 "sim.log"。
 
-  返回:
-    tuple: (case_name, case_seed)，均为str或None。
+  返回值:
+    tuple: (case_name, case_seed)，均为 str 或 None。
   """
+  if not os.path.isfile(file_path):
+    print(f"[VCM] Error, {file_path} not found.")
+    return None, None
 
   # 打开文件并只读取第一行
   with open(file_path, "r") as file:
@@ -72,7 +84,14 @@ def find_case_hw_info(file_path: str = "sim.log"):
 
 def find_regr_cfg_list_path(filename: str = "case_list.txt"):
   """
-  智能查找 regr_cfg 目录下的 case_list.txt 文件路径，若无则返回当前目录下的文件路径。
+  功能描述:
+    智能查找 regr_cfg 目录下的 case_list.txt 文件路径，若无则返回当前目录下的文件路径。
+
+  参数:
+    filename (str): 文件名，默认 "case_list.txt"。
+
+  返回值:
+    str: 文件的绝对路径。
   """
   current_dir = os.getcwd()
   parent_dir = os.path.dirname(current_dir)
@@ -87,12 +106,13 @@ def find_regr_cfg_list_path(filename: str = "case_list.txt"):
 
 def get_cases_name_from_list(case_list_filename: str = "case_list.txt"):
   """
-  根据当前路径结构智能查找 case_list.txt 文件并提取用例名称。
+  功能描述:
+    根据当前路径结构智能查找 case_list.txt 文件并提取用例名称。
 
   参数:
-    case_list_filename (str): 用例列表文件名，默认"case_list.txt"。
+    case_list_filename (str): 用例列表文件名，默认 "case_list.txt"。
 
-  返回:
+  返回值:
     list: 用例名称列表。
   """
   case_list_path = find_regr_cfg_list_path(case_list_filename)
@@ -113,13 +133,14 @@ def get_cases_name_from_list(case_list_filename: str = "case_list.txt"):
 
 def check_case_file_exist(case_name: str):
   """
-  检查单个 case 文件（case_name.sv）是否存在于 case_uvm 目录（支持多层子目录）下。
+  功能描述:
+    检查单个 case 文件（case_name.sv）是否存在于 case_uvm 目录（支持多层子目录）下。
 
   参数:
-    case_name (str): 用例名称
+    case_name (str): 用例名称。
 
-  返回:
-    bool: 是否存在
+  返回值:
+    bool: 是否存在。
   """
   case_dir = find_case_uvm_dir()
   if not case_dir:
@@ -138,13 +159,14 @@ def check_case_file_exist(case_name: str):
 
 def check_case_files_exist(case_names: List[str]):
   """
-  检查给定的 case 名称列表中，每个 case 文件（case_name.sv）是否存在于 case_uvm 目录（支持多层子目录）下。
+  功能描述:
+    检查给定的 case 名称列表中，每个 case 文件（case_name.sv）是否存在于 case_uvm 目录（支持多层子目录）下。
 
   参数:
-    case_names (list[str]): 用例名称列表
+    case_names (list[str]): 用例名称列表。
 
-  返回:
-    dict[str, bool]: key 为 case 名称，value 为是否存在（True/False）
+  返回值:
+    dict[str, bool]: key 为 case 名称，value 为是否存在（True/False）。
   """
   case_dir = find_case_uvm_dir()
   if not case_dir:
@@ -166,25 +188,29 @@ def check_case_files_exist(case_names: List[str]):
 
 def check_case_name_valid(case_name: str):
   """
-  检查用例名称是否符合命名规范：必须为 case_*_test 这种格式。
+  功能描述:
+    检查用例名称是否符合命名规范：必须为 case_*_test 这种格式。
 
   参数:
-    case_name (str): 用例名称
+    case_name (str): 用例名称。
 
-  返回:
-    bool: 是否符合命名规范
+  返回值:
+    bool: 是否符合命名规范。
   """
   # 必须以 case_ 开头，_test 结尾，中间至少有一个字符，可为字母、数字、下划线
-  pattern = r"^case_[a-zA-Z0-9_]+_test$"
-  if re.match(pattern, case_name):
-    return True
-  else:
-    return False
+  return bool(re.match(r"^case_[a-zA-Z0-9_]+_test$", case_name))
   
 def get_info_from_emc(emc_file: str = "emc.txt"):
   """
-  解析 EMC 配置文本，返回结构化的测试用例数据。
-  每个测试用例组为一个 dict，包含 names, count, arguments, tags 等字段。
+  功能描述:
+    解析 EMC 配置文本，返回结构化的测试用例数据。
+    每个测试用例组为一个 dict，包含 names, count, arguments, tags 等字段。
+
+  参数:
+    emc_file (str): EMC 配置文件名，默认 "emc.txt"。
+
+  返回值:
+    list: 每个元素为 dict，包含 names, count, arguments, tags。
   """
   emc_file_path = find_regr_cfg_list_path(emc_file)
   if not os.path.isfile(emc_file_path):
@@ -195,11 +221,7 @@ def get_info_from_emc(emc_file: str = "emc.txt"):
     lines = f.readlines()
 
   # 找到 tests: 行号
-  tests_idx = None
-  for idx, line in enumerate(lines):
-    if re.match(r'^\s*tests\s*:', line):
-      tests_idx = idx
-      break
+  tests_idx = next((idx for idx, line in enumerate(lines) if re.match(r'^\s*tests\s*:', line)), None)
   if tests_idx is None:
     print("[VCM] Error, 'tests:' section not found.")
     return []
@@ -244,7 +266,14 @@ def get_info_from_emc(emc_file: str = "emc.txt"):
 
 def gen_case_list_from_emc(emc_file: str = "emc.txt"):
   """
-  根据结构化测试用例数据，生成最终的 case 名称列表（按 count 展开）。
+  功能描述:
+    根据结构化测试用例数据，生成最终的 case 名称列表（按 count 展开），并写入 .list 文件。
+
+  参数:
+    emc_file (str): EMC 配置文件名，默认 "emc.txt"。
+
+  返回值:
+    无
   """
 
   emc_info = get_info_from_emc(emc_file)
@@ -265,15 +294,26 @@ def gen_case_list_from_emc(emc_file: str = "emc.txt"):
   print(f"[VCM] Case list generated: {list_file_path}")
 
 def caselist_lint(caselist_name: str, module_name: str = None):
+  """
+  功能描述:
+    检查 case list 文件中的用例名称是否合法且对应文件存在。
+
+  参数:
+    caselist_name (str): case list 文件名。
+    module_name (str): 模块名称，可选。
+
+  返回值:
+    tuple: (cases, status)
+      cases (list): 用例名称列表。
+      status (bool): 检查是否全部通过。
+  """
   # Check if the case list name is valid
   cases = get_cases_name_from_list(caselist_name)
-
   if not cases:
     print(f"[VCM] Error: Case list '{caselist_name}' does not exist.")
-    return
+    return [], False
   
   status = True
-
   for case_name in cases:
     # Check if the case name is valid
     if check_case_name_valid(case_name) is False:

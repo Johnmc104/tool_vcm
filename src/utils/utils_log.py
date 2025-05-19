@@ -6,6 +6,10 @@ import datetime
 class Logger:
   def __init__(self, level="INFO"):
     # 配置 loguru logger
+    valid_levels = {"TRACE", "DEBUG", "INFO", "SUCCESS", "WARNING", "ERROR", "CRITICAL"}
+    if level not in valid_levels:
+      raise ValueError(f"Invalid log level: {level}. Must be one of {valid_levels}")
+    
     logger.remove()  # 移除默认的日志处理器
     logger.add(sys.stderr, level=level)  # 设置全局日志级别
     logger.configure(handlers=[
@@ -17,6 +21,12 @@ class Logger:
     ])
 
   def log(self, msg, level="INFO"):
+    # 校验日志级别
+    valid_levels = {"DEBUG", "INFO", "WARNING", "ERROR"}
+    if level not in valid_levels:
+      logger.error(f"Invalid log level: {level}. Must be one of {valid_levels}")
+      level = "INFO"
+
     # 获取调用堆栈信息
     frame = inspect.currentframe().f_back
     filename = frame.f_code.co_filename
