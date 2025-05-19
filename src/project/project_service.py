@@ -14,7 +14,7 @@ class ProjectService:
   def add_project(self, project_name):
     if self.manager.exist_project(project_name):
       self.logger.log(f"Project '{project_name}' already exists.", level="INFO")
-      return
+      return False
     creator = get_current_user()
     self.manager.add_project(project_name, creator)
     self.logger.log(f"Project '{project_name}' added by '{creator}'.", level="INFO")

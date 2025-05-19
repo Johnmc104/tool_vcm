@@ -7,7 +7,7 @@ from item.regr_item import RegrItem
 from utils.utils_env import check_sim_single_function_result, check_sim_single_timing_result
 import subprocess
 
-def process_single_sim_info(args, sim_manager, sim_info, post_flag):
+def process_single_sim_info(logger, args, sim_manager, sim_info, post_flag):
   sim_id = sim_info.get("sim_id")
   job_id = sim_info.get("job_id")
   sim_log = sim_info.get("sim_log")
@@ -18,32 +18,46 @@ def process_single_sim_info(args, sim_manager, sim_info, post_flag):
     tim_result = check_sim_single_timing_result(sim_log)
 
   if fun_result is None or tim_result is None:
-    print(f"[VCM] Warning: sim_id '{sim_id}' has no function or timing result, skipping.")
+    logger.log(f"sim_id '{sim_id}' has no function or timing result, skipping.", level="WARNING")
     sim_info["status"] = "CheckFail"
-    return
-  else:
-    print(f"[VCM] sim_id '{sim_id}' function result: {fun_result}, timing result: {tim_result}")
+    sim_info["check_result"] = "Unknown"
+    return sim_info
 
-  sim_info["status"] = "CheckFail"
+  logger.log(f"sim_id '{sim_id}' function result: {fun_result}, timing result: {tim_result}", level="INFO")
+
   total_result = fun_result + tim_result
+
+
   if job_id == 0 or job_id is None:
     if args.sim_time is None:
-      print(f"[VCM] Error: sim_time is not provided.")
+      logger.log(f"sim_time is not provided for sim_id '{sim_id}'.", level="ERROR")
       sim_time = 0
     else:
       sim_time = args.sim_time
   else:
     sim_time = get_job_elapsed_time(job_id)
+
+  try:
+    sim_time = int(sim_time)
+  except (TypeError, ValueError):
+    sim_time = 0
+
   if sim_time is None:
-    print(f"[VCM] Warning: sim_id '{sim_id}' has no elapsed time, skipping.")
-    return
+    logger.log(f"sim_id '{sim_id}' has no elapsed time, skipping.", level="WARNING")
+    sim_info["status"] = "CheckFail"
+    sim_info["check_result"] = "Unknown"
+    return sim_info
+  
+  # 检查结果
+  if total_result == 0:
+    sim_info["status"] = "CheckDone"
+    sim_info["check_result"] = "Pass"
+    sim_manager.update_sim_time_pass(sim_id, sim_time, fun_result, tim_result, True)
   else:
     sim_info["status"] = "CheckDone"
-    if total_result == 0:
-      sim_manager.update_sim_time_pass(sim_id, sim_time, fun_result, tim_result, True)
-    else:
-      sim_manager.update_sim_time_pass(sim_id, sim_time, fun_result, tim_result, False)
-      print(f"[VCM] sim_id '{sim_id}' has error in function or timing result. at {sim_log}")
+    sim_info["check_result"] = "Fail"
+    sim_manager.update_sim_time_pass(sim_id, sim_time, fun_result, tim_result, False)
+    logger.log(f"sim_id '{sim_id}' has error in function or timing result. at {sim_log}", level="ERROR")
   return sim_info
 
 def get_job_elapsed_time(job_id):
@@ -76,21 +90,21 @@ def get_job_elapsed_time(job_id):
   else:
     return None  # 作业可能不存在或没有执行时间
   
-def handle_sim_time_pass(cursor, args):
+def handle_sim_time_pass(cursor, logger, args):
   sim_manager = SimManager(cursor)
 
   if os.path.basename(os.getcwd()) != "slurm":
-    print("[VCM] Error: Current directory must be 'slurm'.")
+    logger.log("Current directory must be 'slurm'.", level="ERROR")
     return
 
   regr_item = RegrItem.load_from_json()
   task_dicts = regr_item.get_tasks()
   if not task_dicts:
-    print("[VCM] Error: No task data found in regr_item.")
+    logger.log("No task data found in regr_item.", level="ERROR")
     return
   sim_dicts = regr_item.get_sims()
   if not sim_dicts:
-    print("[VCM] Error: No simulation data found in regr_item.")
+    logger.log("No simulation data found in regr_item.", level="ERROR")
     return
   
   # get post
@@ -100,12 +114,9 @@ def handle_sim_time_pass(cursor, args):
     post_flag = True
   
   for sim_info in sim_dicts:
-    sim_info = process_single_sim_info(args, sim_manager, sim_info, post_flag)
+    sim_info = process_single_sim_info(logger, args, sim_manager, sim_info, post_flag)
 
   # 更新SimItem
   regr_item.set_sims(sim_dicts)
   regr_item.save_to_json()
-
-
-      
 

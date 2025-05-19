@@ -20,7 +20,7 @@ class SimService:
     handle_update_node_dir(self.cursor, args)
 
   def handle_sim_time_pass(self, args):
-    handle_sim_time_pass(self.cursor, args)
+    handle_sim_time_pass(self.cursor, self.logger, args)
 
   def handle_list_sim_info(self, args):
     handle_list_sim_info(self.cursor, args)

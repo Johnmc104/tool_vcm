@@ -38,7 +38,7 @@ class ProjectCLI:
         ]
       },
       "list": {
-        "help": "list all projects.",
+        "help": "List all projects.",
         "usage": "%(prog)s",
         "arguments": []
       },
@@ -99,6 +99,9 @@ class ProjectCLI:
     elif sub == 'rename':
       old_name = getattr(args, 'old_project_name', None)
       new_name = getattr(args, 'new_project_name', None)
+      if not old_name or not new_name:
+        self.logger.log("Both old and new project names are required.", level="ERROR")
+        return
       self.service.rename_project(old_name, new_name)
 
     elif sub == 'list':
@@ -118,6 +121,7 @@ class ProjectCLI:
     elif sub == 'del':
       project_name = get_project_name(args)
       if not project_name:
+        self.logger.log("Project name is required.", level="ERROR")
         return
       input_code = input("Please enter authorization code to delete the project: ")
       self.service.delete_project(project_name, input_code)

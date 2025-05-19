@@ -1,9 +1,11 @@
 import json
 import os
+from constants import get_current_time, get_current_user
 
 class SimItem:
   def __init__(self, 
-    sim_id, case_name, case_seed, job_id, status="None", sim_log="None"
+    sim_id, case_name, case_seed, job_id, status="None", sim_log="None", check_result=None,created_time=None, current_user=None
+    
   ):
     self.sim_id = sim_id
     self.case_name = case_name
@@ -11,7 +13,10 @@ class SimItem:
     self.job_id = job_id
     self.status = status
     self.sim_log = sim_log
-
+    self.check_result = check_result
+    self.created_time = created_time if created_time is not None else get_current_time()
+    self.current_user = current_user if current_user is not None else get_current_user()
+    
   def to_dict(self):
     return {
       "sim_id": self.sim_id,
@@ -19,8 +24,12 @@ class SimItem:
       "case_seed": self.case_seed,
       "job_id": self.job_id,
       "status": self.status,
-      "sim_log": self.sim_log
+      "sim_log": self.sim_log,
+      "check_result": self.check_result,
+      "created_time": self.created_time,
+      "current_user": self.current_user
     }
+
 
   @staticmethod
   def from_dict(data):
@@ -29,8 +38,11 @@ class SimItem:
       case_name=data.get("case_name"),
       case_seed=data.get("case_seed"),
       job_id=data.get("job_id"),
-      status=data.get("status"),
-      sim_log=data.get("sim_log")
+      status=data.get("status", "None"),
+      sim_log=data.get("sim_log", "None"),
+      check_result=data.get("check_result"),
+      created_time=data.get("created_time"),
+      current_user=data.get("current_user"),
     )
 
   @staticmethod
