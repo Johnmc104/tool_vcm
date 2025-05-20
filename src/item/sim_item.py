@@ -15,7 +15,6 @@ class SimItem:
     self.sim_log = sim_log
     self.check_result = check_result
     self.created_time = created_time if created_time is not None else get_current_time()
-    self.current_user = current_user if current_user is not None else get_current_user()
     
   def to_dict(self):
     return {
@@ -26,8 +25,7 @@ class SimItem:
       "status": self.status,
       "sim_log": self.sim_log,
       "check_result": self.check_result,
-      "created_time": self.created_time,
-      "current_user": self.current_user
+      "created_time": self.created_time
     }
 
 
@@ -41,8 +39,7 @@ class SimItem:
       status=data.get("status", "None"),
       sim_log=data.get("sim_log", "None"),
       check_result=data.get("check_result"),
-      created_time=data.get("created_time"),
-      current_user=data.get("current_user"),
+      created_time=data.get("created_time")
     )
 
   @staticmethod

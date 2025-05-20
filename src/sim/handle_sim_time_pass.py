@@ -4,6 +4,7 @@ import json
 from constants import FILE_VCM_TASK
 from sim.sim_manager import SimManager
 from item.regr_item import RegrItem
+from item.sim_item import SimItem
 from utils.utils_env import check_sim_single_function_result, check_sim_single_timing_result
 import subprocess
 
@@ -100,25 +101,28 @@ def handle_sim_time_pass(cursor, logger, args):
     return
 
   regr_item = RegrItem.load_from_json()
-  task_dicts = regr_item.get_tasks()
-  if not task_dicts:
+  tasks = getattr(regr_item, "tasks", None)
+  if not tasks or not isinstance(tasks, list):
     logger.log("No task data found in regr_item.", level="ERROR")
     return
-  sim_dicts = regr_item.get_sims()
-  if not sim_dicts:
-    logger.log("No simulation data found in regr_item.", level="ERROR")
-    return
-  
-  # get post
-  if task_dicts[0].get("status_post") == "False" or task_dicts[0].get("status_post") == "None":
-    post_flag = False
-  else:
-    post_flag = True
-  
-  for sim_info in sim_dicts:
-    sim_info = process_single_sim_info(logger, args, sim_manager, sim_info, post_flag)
 
-  # 更新SimItem
-  regr_item.set_sims(sim_dicts)
+  for task in tasks:
+    sim_logs = getattr(task, "sim_logs", None)
+    if sim_logs is None:
+      logger.log("No sim_logs found in a task.", level="ERROR")
+      continue
+  
+    status_post = getattr(task, "status_post", "False")
+    post_flag = False if status_post in ("False", "None") else True
+  
+    for sim_item in sim_logs:
+      # sim_item 是 SimItem 实例
+      sim_info = sim_item.to_dict()
+      sim_info = process_single_sim_info(logger, args, sim_manager, sim_info, post_flag)
+      # 直接更新 sim_item 的属性
+      sim_item.status = sim_info.get("status", sim_item.status)
+      sim_item.check_result = sim_info.get("check_result", sim_item.check_result)
+      sim_item.sim_log = sim_info.get("sim_log", sim_item.sim_log)
+
+  # 保存整个 regr_item
   regr_item.save_to_json()
-
