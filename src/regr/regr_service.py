@@ -2,9 +2,10 @@ from regr.regr_manager import RegrManager
 from module.module_manager import ModuleManager
 from constants import get_current_user
 from item.regr_item import RegrItem
+from utils.utils_log import Logger
 
 class RegrService:
-  def __init__(self, cursor, logger):
+  def __init__(self, cursor, logger: Logger):
     """
     初始化 RegrService 实例。
 
@@ -37,7 +38,7 @@ class RegrService:
 
     # 构造regr_info字典
     regr_item = RegrItem(regr_id, regr_type, module_name, module_id)
-    regr_item.save_to_json()
+    regr_item.save_to_file()
 
   def update_slurm_info(self, part_name: str, part_mode: str,
                         node_name: str, work_name: str, work_url: str,
@@ -53,7 +54,7 @@ class RegrService:
       case_list (str): 用例列表（逗号分隔）。
       module_name (str): 模块名称。
     """
-    regr_item = RegrItem.load_from_json()
+    regr_item = RegrItem.load_from_file()
 
     if not regr_item or regr_item.regr_id is None:
       print(f"[VCM] Regr ID not found in JSON file.")
@@ -84,7 +85,7 @@ class RegrService:
     regr_item.work_name = work_name
     regr_item.work_url = work_url
     regr_item.case_list = case_list
-    regr_item.save_to_json()
+    regr_item.save_to_file()
     self.logger.log(f"SLURM info updated for regr '{regr_id}' under module '{module_name}'.", level="INFO")
 
 

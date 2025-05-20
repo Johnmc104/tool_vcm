@@ -10,9 +10,10 @@ from item.task_item import TaskItem
 from utils.utils_lib import rm_vcm_fail_file, add_vcm_fail_file
 from item.regr_item import RegrItem
 from item.task_item import TaskItem
+from utils.utils_log import Logger
 
 class TaskService:
-  def __init__(self, cursor, logger):
+  def __init__(self, cursor, logger: Logger):
     self.cursor = cursor
     self.logger = logger
     self.manager = TaskManager(cursor)
@@ -119,7 +120,7 @@ class TaskService:
         self.logger.log("Current directory must be slurm.", level="ERROR")
         return
       
-      regr_item = RegrItem.load_from_json()
+      regr_item = RegrItem.load_from_file()
       regr_id = regr_item.regr_id
       user_name = regr_item.current_user
 
@@ -159,7 +160,7 @@ class TaskService:
     else:
       self.manager.update_task_regr_id(task_id, False, regr_id)
 
-    regr_item.save_to_json()
+    regr_item.save_to_file()
 
   def list_tasks(self, count=None):
     return self.manager.list_tasks(limit=count)

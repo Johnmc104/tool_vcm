@@ -10,8 +10,9 @@ from constants import get_current_user, get_current_dir
 from item.sim_item import SimItem
 from item.task_item import TaskItem
 from sim.handle_sim_time_pass import process_single_sim_info
+from utils.utils_log import Logger
 
-def handle_add_basic_single(cursor, logger, args):
+def handle_add_basic_single(cursor, logger:Logger, args):
   module_manager = ModuleManager(cursor)
   case_manager = CaseManager(cursor)
   sim_manager = SimManager(cursor)
@@ -20,11 +21,12 @@ def handle_add_basic_single(cursor, logger, args):
   current_dir = get_current_dir()
 
   # get taskitem
-  task_dicts = TaskItem.load_from_file(VCM_TASK_FILENAME)
-
-  if not task_dicts:
+  task_item = TaskItem.load_from_file(VCM_TASK_FILENAME)
+  if not task_item:
     logger.log("No task info found.", level="ERROR")
     return
+  
+  task_id = task_item.task_id
   
   # check sim_log file is valid
   sim_log_path = os.path.join(current_dir, args.sim_log_path)
@@ -61,24 +63,14 @@ def handle_add_basic_single(cursor, logger, args):
     logger.log(f"Case '{case_name}' added under module '{module_name}'.", level="INFO")
 
   # 读取/初始化 vcm_task_info.json 的 sim_logs
-  sim_logs = SimItem.load_sim_logs(VCM_TASK_FILENAME)
-
+  sim_logs = SimItem.load_from_file(VCM_TASK_FILENAME)
 
   # 检查是否已存在该 sim.log 记录，防止重复写入
   exist_log = SimItem.exists(sim_logs, case_name, case_seed, sim_log_path)
   if exist_log:
     logger.log(f"Sim log for case '{case_name}' with seed '{case_seed}' already exists (sim_id: {exist_log.sim_id}). Skipping.", level="INFO")
     return
-
-  # 读取 task_id
-  try:
-    with open(VCM_TASK_FILENAME, "r") as f:
-      task_info = json.load(f)
-    task_id = task_info.get("task_id")
-  except Exception as e:
-    logger.log(f"Failed to read task info file: {e}", level="ERROR")
-    return
-    
+ 
   # 写入 sim_info
   sim_id = sim_manager.add_sim_basic_single(case_id, case_seed, task_id, current_user)
   logger.log(f"Basic single simulation added with ID '{sim_id}', case name '{case_name}', seed '{case_seed}'.", level="INFO")
@@ -87,7 +79,7 @@ def handle_add_basic_single(cursor, logger, args):
   sim_item = SimItem(sim_id, case_name, case_seed, 0, "TODO", sim_log_path)
   #print(f"[VCM] SimItem created with ID '{sim_item.sim_id}', case name '{sim_item.case_name}', seed '{sim_item.case_seed}', sim_log '{sim_item.sim_log}'.")
   
-  post_flag = task_dicts.get_post_status()
+  post_flag = task_item.get_post_status()
 
   sim_info = sim_item.to_dict()
   sim_info = process_single_sim_info(logger, args, sim_manager, sim_info, post_flag)
@@ -95,6 +87,6 @@ def handle_add_basic_single(cursor, logger, args):
 
   sim_logs.append(SimItem.from_dict(sim_info))
 
-  # 更新 task_dicts 中的 sim_logs
-  task_dicts.update_sim_logs(sim_logs)
-  task_dicts.save_to_file(VCM_TASK_FILENAME)
+  # 更新 task_item 中的 sim_logs
+  task_item.update_sim_logs(sim_logs)
+  task_item.save_to_file(VCM_TASK_FILENAME)

@@ -1,11 +1,11 @@
+from item.base_item import BaseItem
 import json
 import os
-from constants import get_current_time, get_current_user
+from constants import get_current_time
 
-class SimItem:
+class SimItem(BaseItem):
   def __init__(self, 
-    sim_id, case_name, case_seed, job_id, status="None", sim_log="None", check_result=None,created_time=None, current_user=None
-    
+    sim_id, case_name, case_seed, job_id, status="None", sim_log="None", check_result=None, created_time=None
   ):
     self.sim_id = sim_id
     self.case_name = case_name
@@ -15,7 +15,7 @@ class SimItem:
     self.sim_log = sim_log
     self.check_result = check_result
     self.created_time = created_time if created_time is not None else get_current_time()
-    
+
   def to_dict(self):
     return {
       "sim_id": self.sim_id,
@@ -28,10 +28,9 @@ class SimItem:
       "created_time": self.created_time
     }
 
-
-  @staticmethod
-  def from_dict(data):
-    return SimItem(
+  @classmethod
+  def from_dict(cls, data):
+    return cls(
       sim_id=data.get("sim_id"),
       case_name=data.get("case_name"),
       case_seed=data.get("case_seed"),
@@ -42,16 +41,16 @@ class SimItem:
       created_time=data.get("created_time")
     )
 
-  @staticmethod
-  def load_sim_logs(file_path):
+  @classmethod
+  def load_from_file(cls, file_path):
     if not os.path.exists(file_path):
       return []
     with open(file_path, "r") as f:
       data = json.load(f)
-    return [SimItem.from_dict(item) for item in data.get("sim_logs", [])]
+    return [cls.from_dict(item) for item in data.get("sim_logs", [])]
 
-  @staticmethod
-  def save_sim_logs(file_path, sim_logs):
+  @classmethod
+  def save_to_file(cls, file_path, sim_logs):
     with open(file_path, "w") as f:
       json.dump({"sim_logs": [log.to_dict() for log in sim_logs]}, f, indent=2)
 

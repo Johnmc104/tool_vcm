@@ -1,10 +1,11 @@
 from item.task_item import TaskItem
 from item.sim_item import SimItem
+from item.base_item import BaseItem
 from constants import get_current_user, get_current_dir, get_current_time, get_current_host, VCM_REGR_FILENAME
 import json
 import os
 
-class RegrItem:
+class RegrItem(BaseItem):
   def __init__(self, regr_id, regr_type, module_name, module_id=None):
     self.regr_id = regr_id
     self.regr_type = regr_type
@@ -67,12 +68,12 @@ class RegrItem:
     item.sims = [SimItem.from_dict(s) for s in data.get("sims", [])]
     return item
 
-  def save_to_json(self, path=VCM_REGR_FILENAME):
+  def save_to_file(self, path=VCM_REGR_FILENAME):
     with open(path, "w") as f:
       json.dump(self.to_dict(), f, indent=2, ensure_ascii=False)
 
   @classmethod
-  def load_from_json(cls, path=VCM_REGR_FILENAME):
+  def load_from_file(cls, path=VCM_REGR_FILENAME):
     if not os.path.exists(path):
       return None
     if os.path.getsize(path) == 0:  # 文件为空
@@ -82,8 +83,13 @@ class RegrItem:
     return cls.from_dict(data)
   
   def get_sims(self):
-    return [sim.to_dict() for sim in self.sims]
+    """返回所有 sim 的列表"""
+    return self.sims
   
+  def get_sims_dict(self):
+    """返回所有 sim 的 dict 列表"""
+    return [sim.to_dict() for sim in self.sims]
+
   def set_sims(self, sim_list):
     self.sims = []
     for sim in sim_list:
@@ -92,11 +98,30 @@ class RegrItem:
       else:
         sim_item = SimItem.from_dict(sim)
         self.sims.append(sim_item)
+  
+  def add_sim(self, sim):
+    """添加单个 sim，支持 SimItem 或 dict"""
+    if not isinstance(sim, SimItem):
+      sim = SimItem.from_dict(sim)
+    # 避免重复（可按 sim_id 或 case_name, case_seed, sim_log 唯一性）
+    key = (sim.case_name, sim.case_seed, sim.sim_log)
+    for s in self.sims:
+      if (s.case_name, s.case_seed, s.sim_log) == key:
+        return
+    self.sims.append(sim)
+
+  def remove_sim(self, sim_id):
+    """根据 sim_id 移除 sim"""
+    self.sims = [s for s in self.sims if s.sim_id != sim_id]
 
   def clear_sims(self):
     self.sims = []
   
   def get_tasks(self):
+    return self.tasks
+  
+  def get_tasks_dict(self):
+    """返回所有 task 的 dict 列表"""
     return [task.to_dict() for task in self.tasks]
   
   def set_tasks(self, task_list):
@@ -110,3 +135,17 @@ class RegrItem:
 
   def clear_tasks(self):
     self.tasks = []
+
+  def add_task(self, task):
+    """添加单个 task，支持 TaskItem 或 dict"""
+    if not isinstance(task, TaskItem):
+      task = TaskItem.from_dict(task)
+    # 避免重复（可按 task_id 唯一性）
+    for t in self.tasks:
+      if t.task_id == task.task_id:
+        return
+    self.tasks.append(task)
+
+  def remove_task(self, task_id):
+    """根据 task_id 移除 task"""
+    self.tasks = [t for t in self.tasks if t.task_id != task_id]

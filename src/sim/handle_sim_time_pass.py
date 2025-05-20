@@ -1,14 +1,15 @@
 
 import os
-import json
-from constants import FILE_VCM_TASK
 from sim.sim_manager import SimManager
 from item.regr_item import RegrItem
+from item.task_item import TaskItem
 from item.sim_item import SimItem
 from utils.utils_env import check_sim_single_function_result, check_sim_single_timing_result
 import subprocess
+from utils.utils_log import Logger
+from typing import List
 
-def process_single_sim_info(logger, args, sim_manager, sim_info, post_flag):
+def process_single_sim_info(logger:Logger, args, sim_manager, sim_info, post_flag):
   sim_id = sim_info.get("sim_id")
   job_id = sim_info.get("job_id")
   sim_log = sim_info.get("sim_log")
@@ -93,29 +94,34 @@ def get_job_elapsed_time(job_id):
   else:
     return None  # 作业可能不存在或没有执行时间
   
-def handle_sim_time_pass(cursor, logger, args):
+def handle_sim_time_pass(cursor, logger:Logger, args):
   sim_manager = SimManager(cursor)
+
+  task_items : List[TaskItem]
+  sim_items: List[SimItem]
 
   if os.path.basename(os.getcwd()) != "slurm":
     logger.log("Current directory must be 'slurm'.", level="ERROR")
     return
 
-  regr_item = RegrItem.load_from_json()
-  tasks = getattr(regr_item, "tasks", None)
-  if not tasks or not isinstance(tasks, list):
-    logger.log("No task data found in regr_item.", level="ERROR")
+  regr_item = RegrItem.load_from_file()
+  task_items = regr_item.get_tasks()
+  if not task_items or not isinstance(task_items, list):
+    logger.log("No task_item data found in regr_item.", level="ERROR")
     return
 
-  for task in tasks:
-    sim_logs = getattr(task, "sim_logs", None)
-    if sim_logs is None:
-      logger.log("No sim_logs found in a task.", level="ERROR")
+  task_item : TaskItem
+  for task_item in task_items:
+    sim_items = task_item.get_sims()
+    if sim_items is None:
+      logger.log("No sim_items found in a task_item.", level="ERROR")
       continue
   
-    status_post = getattr(task, "status_post", "False")
+    status_post = getattr(task_item, "status_post", "False")
     post_flag = False if status_post in ("False", "None") else True
   
-    for sim_item in sim_logs:
+    sim_item : SimItem
+    for sim_item in sim_items:
       # sim_item 是 SimItem 实例
       sim_info = sim_item.to_dict()
       sim_info = process_single_sim_info(logger, args, sim_manager, sim_info, post_flag)
@@ -125,4 +131,4 @@ def handle_sim_time_pass(cursor, logger, args):
       sim_item.sim_log = sim_info.get("sim_log", sim_item.sim_log)
 
   # 保存整个 regr_item
-  regr_item.save_to_json()
+  regr_item.save_to_file()

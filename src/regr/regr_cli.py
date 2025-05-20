@@ -1,6 +1,6 @@
 from regr.regr_service import RegrService
 from utils.utils_git import get_module_name
-from constants import get_current_user, get_current_dir
+from constants import get_current_dir
 from regr.regr_report import print_regrs_table
 
 class RegrCLI:

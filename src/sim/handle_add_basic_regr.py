@@ -1,14 +1,11 @@
 import os
-from constants import VCM_REGR_FILENAME, VCM_TASK_FILENAME
-from utils.utils_git import get_module_name_from_git
+from constants import VCM_REGR_FILENAME
 from case.case_manager import CaseManager
 from sim.sim_manager import SimManager
-from module.module_manager import ModuleManager
-from item.task_item import TaskItem
 from item.regr_item import RegrItem
 from item.sim_item import SimItem
-from utils.utils_env import get_node_info
 from utils.utils_case import get_cases_name_from_list
+from utils.utils_log import Logger
 
 def get_regr_log_name(status_log_path = "status.log", reg_info_log_path = "log/reg_info.log"):
   merged_data = []
@@ -63,7 +60,7 @@ def get_regr_log_name(status_log_path = "status.log", reg_info_log_path = "log/r
 
   return merged_data
 
-def handle_add_basic_regr(cursor, args):
+def handle_add_basic_regr(cursor, loger:Logger, args):
   sim_manager = SimManager(cursor)
   case_manager = CaseManager(cursor)
 
@@ -78,7 +75,7 @@ def handle_add_basic_regr(cursor, args):
     print(f"[VCM] Error: File '{VCM_REGR_FILENAME}' not found.")
     return
   else:
-    regr_item = RegrItem.load_from_json()
+    regr_item = RegrItem.load_from_file()
 
   regr_id = regr_item.regr_id
   regr_list = regr_item.case_list
@@ -124,8 +121,8 @@ def handle_add_basic_regr(cursor, args):
       # 创建 SimItem 并加入 regr_item.sims
       sim_log_path = "None"
       sim_item = SimItem(sim_id, case_name, case_seed, job_id, sim_log_path)
-      regr_item.sims.append(sim_item)
+      regr_item.add_sim(sim_item)
 
   # 保存 regr_item 到 JSON
-  regr_item.save_to_json()
+  regr_item.save_to_file()
   print(f"[VCM] Successfully added basic regression for {len(regr_item.sims)} cases.")

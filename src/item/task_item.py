@@ -1,10 +1,11 @@
 from typing import List, Optional
 from item.sim_item import SimItem
+from item.base_item import BaseItem
 from constants import get_current_user, get_current_dir, get_current_time, get_current_host, VCM_TASK_FILENAME
 import json
 import os
 
-class TaskItem:
+class TaskItem(BaseItem):
   def __init__(
     self,
     task_id=None,
@@ -98,3 +99,35 @@ class TaskItem:
     
   def clear_sim_logs(self):
     self.sim_logs = []
+
+  def get_sims(self):
+    """获取所有 sim_logs 列表"""
+    return self.sim_logs
+
+  def get_sim_logs(self):
+    """获取所有 sim_logs 列表"""
+    return self.sim_logs
+
+  def set_sim_logs(self, sim_logs):
+    """批量设置 sim_logs，支持 SimItem 或 dict"""
+    self.sim_logs = []
+    for sim in sim_logs:
+      if isinstance(sim, SimItem):
+        self.sim_logs.append(sim)
+      else:
+        self.sim_logs.append(SimItem.from_dict(sim))
+
+  def add_sim(self, sim):
+    """添加单个 sim_log，支持 SimItem 或 dict"""
+    if not isinstance(sim, SimItem):
+      sim = SimItem.from_dict(sim)
+    # 避免重复
+    key = (sim.case_name, sim.case_seed, sim.sim_log)
+    for log in self.sim_logs:
+      if (log.case_name, log.case_seed, log.sim_log) == key:
+        return  # 已存在则不添加
+    self.sim_logs.append(sim)
+
+  def remove_sim(self, sim_id):
+    """根据 sim_id 移除 sim_log"""
+    self.sim_logs = [s for s in self.sim_logs if s.sim_id != sim_id]
