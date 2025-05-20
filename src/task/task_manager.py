@@ -37,16 +37,16 @@ class TaskManager(BaseManager):
       WHERE task_id = ?
     ''', (True, node_name, task_id))
 
-  def update_task_regr_id(self, task_id: int, regr_id: int) -> None:
+  def update_task_regr_id(self, task_id: int, is_regr: bool,regr_id: int) -> None:
     """
     更新任务的回归 ID。
     ...
     """
     self.cursor.execute('''
       UPDATE tasks
-      SET regr_id = ?
+      SET is_regr = ?, regr_id = ?
       WHERE task_id = ?
-    ''', (regr_id, task_id))
+    ''', (is_regr, regr_id, task_id))
 
   def list_tasks(self, limit: Optional[int] = None) -> List[Any]:
     """

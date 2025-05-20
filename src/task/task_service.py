@@ -150,14 +150,14 @@ class TaskService:
           self.logger.log(f"task_id not found in vcm_task_info.json.", level="ERROR")
           return
         
-        self.manager.update_task_regr_id(task_id, regr_id)
+        self.manager.update_task_regr_id(task_id, True, regr_id)
         self.logger.log(f"Task ID '{task_id}' updated with regr ID '{regr_id}'.", level="INFO")
 
         regr_item.tasks = [t for t in regr_item.tasks if t.task_id != task_id]
         regr_item.tasks.append(task_item)
         
     else:
-      self.manager.update_task_regr_id(task_id, regr_id)
+      self.manager.update_task_regr_id(task_id, False, regr_id)
 
     regr_item.save_to_json()
 

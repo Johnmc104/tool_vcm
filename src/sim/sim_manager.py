@@ -106,6 +106,19 @@ class SimManager:
       (sim_time, error_num, timing_num, True, is_pass, sim_id)
     )
 
+  def update_sim_task_id(self, sim_id, task_id):
+    """
+    更新指定仿真ID的任务ID
+
+    参数:
+        sim_id (int): 仿真ID
+        task_id (int): 任务ID
+    """
+    self.cursor.execute(
+      '''UPDATE sim_info SET task_id = ? WHERE sim_id = ?''',
+      (task_id, sim_id)
+    )
+
   def fetch_sims(self):
     """
     获取 sim_info 表中所有仿真记录

@@ -23,7 +23,7 @@ def process_single_sim_info(logger, args, sim_manager, sim_info, post_flag):
     sim_info["check_result"] = "Unknown"
     return sim_info
 
-  logger.log(f"sim_id '{sim_id}' function result: {fun_result}, timing result: {tim_result}", level="INFO")
+  #logger.log(f"sim_id '{sim_id}' function result: {fun_result}, timing result: {tim_result}", level="INFO")
 
   total_result = fun_result + tim_result
 
@@ -53,6 +53,7 @@ def process_single_sim_info(logger, args, sim_manager, sim_info, post_flag):
     sim_info["status"] = "CheckDone"
     sim_info["check_result"] = "Pass"
     sim_manager.update_sim_time_pass(sim_id, sim_time, fun_result, tim_result, True)
+    logger.log(f"sim_id '{sim_id}' function result: {fun_result}, timing result: {tim_result}, check pass", level="INFO")
   else:
     sim_info["status"] = "CheckDone"
     sim_info["check_result"] = "Fail"
@@ -64,8 +65,9 @@ def get_job_elapsed_time(job_id):
   # 调用 sacct 命令
   result = subprocess.run(
     ['sacct', '-j', str(job_id), '--format=Elapsed', '--noheader'],
-    capture_output=True,
-    text=True
+    stdout=subprocess.PIPE,
+    stderr=subprocess.PIPE,
+    universal_newlines=True  # 替换 text=True
   )
 
   # 获取输出并处理，只取第一行
