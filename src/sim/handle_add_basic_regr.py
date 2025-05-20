@@ -4,6 +4,7 @@ from case.case_manager import CaseManager
 from sim.sim_manager import SimManager
 from item.regr_item import RegrItem
 from item.sim_item import SimItem
+from item.regr_list_item import RegrListItem
 from utils.utils_case import get_cases_name_from_list
 from utils.utils_log import Logger
 
@@ -64,6 +65,8 @@ def handle_add_basic_regr(cursor, loger:Logger, args):
   sim_manager = SimManager(cursor)
   case_manager = CaseManager(cursor)
 
+  regr_items: list[RegrItem] = []
+
   # 检查当前目录
   current_dir = os.getcwd()
   if os.path.basename(current_dir) not in ("slurm", "regr"):
@@ -75,54 +78,56 @@ def handle_add_basic_regr(cursor, loger:Logger, args):
     print(f"[VCM] Error: File '{VCM_REGR_FILENAME}' not found.")
     return
   else:
-    regr_item = RegrItem.load_from_file()
+    regr_list = RegrListItem.load_from_file()
+    regr_items = regr_list.get_regrs()
 
-  regr_id = regr_item.regr_id
-  regr_list = regr_item.case_list
-  current_user = regr_item.current_user
-  work_name = regr_item.work_name
+  for regr_item in regr_items:
+    regr_case_list = regr_item.case_list
+    current_user = regr_item.current_user
 
-  # clear old sim
-  regr_item.clear_sims()
+    # clear old sim
+    regr_item.clear_sims()
 
-  # get case list
-  caselist_names = get_cases_name_from_list(regr_list)
+    # get case list
+    caselist_names = get_cases_name_from_list(regr_case_list)
 
-  case_names = get_regr_log_name()
-  if not case_names:
-    print(f"[VCM] Error: No case names found in log files.")
-    return
-  
-  # 检查 case_names.case_name 是否与caselist_names一致
-  for _, case_name, _ in case_names:
-    if case_name not in caselist_names:
-      print(f"[VCM] Error: Case name '{case_name}' not found in case list.")
+    case_names = get_regr_log_name()
+    if not case_names:
+      print(f"[VCM] Error: No case names found in log files.")
       return
-
-  for case_item in case_names:
-    job_id, case_name, case_seed = case_item
-    # 检查 case_name 是否存在
-    if not case_manager.exist_case(case_name, regr_item.module_id):
-      print(f"[VCM] Error: Case '{case_name}' not found in module '{regr_item.module_name}'.")
-      return
-    else:
-      case_id = case_manager.find_case_id_by_module_id(case_name, regr_item.module_id)
-      if not case_id:
-        print(f"[VCM] Error: Case ID for '{case_name}' not found.")
-        return
-      
-      #create sim 
-      sim_id = sim_manager.add_sim_basic_regr(case_id, job_id, case_seed, current_user)
-
-      if not sim_id:
-        print(f"[VCM] Error: Failed to add simulation for case '{case_name}'.")
+    
+    # 检查 case_names.case_name 是否与caselist_names一致
+    for _, case_name, _ in case_names:
+      if case_name not in caselist_names:
+        print(f"[VCM] Error: Case name '{case_name}' not found in case list.")
         return
 
-      # 创建 SimItem 并加入 regr_item.sims
-      sim_log_path = "None"
-      sim_item = SimItem(sim_id, case_name, case_seed, job_id, sim_log_path)
-      regr_item.add_sim(sim_item)
+    for case_item in case_names:
+      job_id, case_name, case_seed = case_item
+      # 检查 case_name 是否存在
+      if not case_manager.exist_case(case_name, regr_item.module_id):
+        print(f"[VCM] Error: Case '{case_name}' not found in module '{regr_item.module_name}'.")
+        return
+      else:
+        case_id = case_manager.find_case_id_by_module_id(case_name, regr_item.module_id)
+        if not case_id:
+          print(f"[VCM] Error: Case ID for '{case_name}' not found.")
+          return
+        
+        #create sim 
+        sim_id = sim_manager.add_sim_basic_regr(case_id, job_id, case_seed, current_user)
+
+        if not sim_id:
+          print(f"[VCM] Error: Failed to add simulation for case '{case_name}'.")
+          return
+
+        # 创建 SimItem 并加入 regr_item.sims
+        sim_log_path = "None"
+        sim_item = SimItem(sim_id, case_name, case_seed, job_id, sim_log_path)
+        regr_item.add_sim(sim_item)
+    print(f"[VCM] Successfully added basic regression for {len(regr_item.sims)} cases.")
+    regr_list.update_regr(regr_item)
 
   # 保存 regr_item 到 JSON
-  regr_item.save_to_file()
-  print(f"[VCM] Successfully added basic regression for {len(regr_item.sims)} cases.")
+  regr_list.save_to_file()
+  

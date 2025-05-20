@@ -2,6 +2,7 @@ from regr.regr_manager import RegrManager
 from module.module_manager import ModuleManager
 from constants import get_current_user
 from item.regr_item import RegrItem
+from item.regr_list_item import RegrListItem
 from utils.utils_log import Logger
 
 class RegrService:
@@ -28,17 +29,24 @@ class RegrService:
     """
     module_id = self.module_manager.find_module_id_by_name(module_name)
     created_by = get_current_user()
+
+    regr_list = RegrListItem.load_from_file()
+    if not regr_list:
+      print(f"[VCM] No regression list found.")
+      return
     
+    #create regr to db
     regr_id = self.manager.add_regr(module_id, created_by, regr_base, regr_type)
     if regr_id is None:
       print(f"[VCM] Failed to add regression record for module '{module_name}'.")
       return
-    
     self.logger.log(f"Regr added for module '{module_name}'.", level="INFO")
 
     # 构造regr_info字典
     regr_item = RegrItem(regr_id, regr_type, module_name, module_id)
-    regr_item.save_to_file()
+
+    regr_list.add_regr(regr_item)
+    regr_list.save_to_file()
 
   def update_slurm_info(self, part_name: str, part_mode: str,
                         node_name: str, work_name: str, work_url: str,
@@ -54,39 +62,36 @@ class RegrService:
       case_list (str): 用例列表（逗号分隔）。
       module_name (str): 模块名称。
     """
-    regr_item = RegrItem.load_from_file()
+    regr_item: RegrItem
+
+    regr_list = RegrListItem.load_from_file()
+    if not regr_list:
+      print(f"[VCM] No regression list found.")
+      return
+
+    regr_item = regr_list.get_regr_last()
 
     if not regr_item or regr_item.regr_id is None:
       print(f"[VCM] Regr ID not found in JSON file.")
       return
     regr_id = regr_item.regr_id
-    
+      
+    # 检查回归记录是否存在
     if not self.manager.exist_regr(regr_id):
       self.logger.log(f"Regr '{regr_id}' does not exist at db.", level="WARNING")
       return
-    if part_mode not in ["multi", "single"]:
-      self.logger.log(f"Invalid part_mode '{part_mode}'. Must be 'multi' or 'single'.", level="ERROR")
-      return
-    if not all([part_name, node_name, work_name, work_url]):
-      self.logger.log("Part name, node name, project name and project URL cannot be None.", level="ERROR")
-      return
-    if not case_list:
-      self.logger.log("Case list cannot be None.", level="ERROR")
-      return
-    
-    dir_paths = []
-    
+      
     self.manager.update_slurm_info(regr_id, part_name, part_mode, node_name,
-                                   work_name, work_url, case_list)
+                                  work_name, work_url, case_list)
     # 更新 regr_item 并保存
-    regr_item.part_name = part_name
-    regr_item.part_mode = part_mode
-    regr_item.node_name = node_name
-    regr_item.work_name = work_name
-    regr_item.work_url = work_url
-    regr_item.case_list = case_list
-    regr_item.save_to_file()
+    regr_item.update_slurm_info(part_name, part_mode, node_name,
+                                work_name, work_url, case_list)
     self.logger.log(f"SLURM info updated for regr '{regr_id}' under module '{module_name}'.", level="INFO")
+
+    regr_list.update_regr(regr_item)
+
+    # 保存更新后的回归记录
+    regr_list.save_to_file()
 
 
   def exist(self, regr_id: int, module_name: str):

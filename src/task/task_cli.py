@@ -1,11 +1,13 @@
 from task.task_service import TaskService
 from task.task_report import print_tasks_table
+from task.task_manager import TaskManager
 
 class TaskCLI:
   def __init__(self, cursor, logger):
     self.cursor = cursor
     self.logger = logger
     self.service = TaskService(cursor, logger)
+    self.manager = TaskManager(cursor)
 
   def add_task_subcommands(subparsers):
     commands = {
@@ -52,7 +54,11 @@ class TaskCLI:
       if (args.task_id is None) != (args.regr_id is None):
         self.logger.error("--task_id and --regr_id must both be provided or both omitted.", level="ERROR")
         return
-      self.service.update_task_regr_id(args.task_id, args.regr_id)
+      
+      if args.task_id is None and args.regr_id is None:
+        self.service.update_task_regr_id(args.task_id, args.regr_id)
+      else:
+        self.manager.update_task_regr_id(args.task_id, False, args.regr_id)
     elif args.subcommand == 'list':
       tasks = self.service.list_tasks(count=args.count)
       print_tasks_table(self.cursor, tasks)

@@ -4,6 +4,7 @@ from constants import NODE_MAP
 from item.regr_item import RegrItem
 from item.sim_item import SimItem
 from item.task_item import TaskItem
+from item.regr_list_item import RegrListItem
 from utils.utils_env import get_job_status_name
 
 def get_regr_node_name(status_log_path="status_check.log"):
@@ -58,86 +59,96 @@ def get_regr_sim_log_path(node_name, user_name, work_name, case_name, case_seed)
 def handle_update_node_dir(cursor, args):
   sim_items: list[SimItem]
   task_items: list[TaskItem]
+  regr_items: list[RegrItem]
 
   if os.path.basename(os.getcwd()) != "slurm":
     print("[VCM] Error: Current directory must be 'slurm'.")
     return
-
-  regr_item = RegrItem.load_from_file()
-  sim_items = regr_item.get_sims()
-  if not sim_items:
-    print("[VCM] Error: No simulation data found in regr_item.")
+  
+  regr_list = RegrListItem.load_from_file()
+  regr_items = regr_list.get_regrs()
+  if not regr_items:
+    print("[VCM] Error: No regression items found.")
     return
+  
+  for regr_item in regr_items:
+    sim_items = regr_item.get_sims()
+    if not sim_items:
+      print("[VCM] Error: No simulation data found in regr_item.")
+      return
 
-  task_items = regr_item.get_tasks()
-  if not task_items:
-    print("[VCM] Error: No tasks found in regr_item.")
-    return
+    task_items = regr_item.get_tasks()
+    if not task_items:
+      print("[VCM] Error: No tasks found in regr_item.")
+      return
 
-  sims_to_remove = []
-  for sim_info in sim_items:
-    sim_id = sim_info.sim_id
-    job_id = sim_info.job_id
-    if not job_id:
-      print(f"[VCM] Warning: sim_id '{sim_id}' has no job_id, skipping.")
-      continue
+    sims_to_remove = []
+    for sim_info in sim_items:
+      sim_id = sim_info.sim_id
+      job_id = sim_info.job_id
+      if not job_id:
+        print(f"[VCM] Warning: sim_id '{sim_id}' has no job_id, skipping.")
+        continue
 
-    # 通过 get_job_status_name 获取 status 和 node_name
-    status, node_name, job_status = get_job_status_name(job_id)
-    if status is None or node_name is None:
-      print(f"[VCM] Warning: job_id '{job_id}' status not found, skipping.")
-      continue
-    sim_info.job_status = job_status
+      # 通过 get_job_status_name 获取 status 和 node_name
+      status, node_name, job_status = get_job_status_name(job_id)
+      if status is None or node_name is None:
+        print(f"[VCM] Warning: job_id '{job_id}' status not found, skipping.")
+        continue
+      sim_info.job_status = job_status
 
-    case_name = getattr(sim_info, "case_name", None)
-    if not case_name:
-      print(f"[VCM] Warning: sim_id '{sim_id}' has no case_name, skipping.")
-      continue
+      case_name = getattr(sim_info, "case_name", None)
+      if not case_name:
+        print(f"[VCM] Warning: sim_id '{sim_id}' has no case_name, skipping.")
+        continue
 
-    if status == "OK":
-      case_seed = sim_info.case_seed
-      sim_log_path = get_regr_sim_log_path(
-        node_name, regr_item.current_user, regr_item.work_name, case_name, case_seed
-      )
-      if os.path.exists(sim_log_path):
-        sim_info.sim_log = sim_log_path
-        sim_info.status = "TODO"
-        print(f"[VCM] sim_id '{sim_id}' (job_id '{job_id}'): Updated simulation log path to '{sim_log_path}'.")
+      if status == "OK":
+        case_seed = sim_info.case_seed
+        sim_log_path = get_regr_sim_log_path(
+          node_name, regr_item.current_user, regr_item.work_name, case_name, case_seed
+        )
+        if os.path.exists(sim_log_path):
+          sim_info.sim_log = sim_log_path
+          sim_info.status = "TODO"
+          print(f"[VCM] sim_id '{sim_id}' (job_id '{job_id}'): Updated simulation log path to '{sim_log_path}'.")
 
-        # 只分配到node匹配的task，且避免重复
-        found_task = False
-        for task in task_items:
-          task_node = task.current_host
-          if task_node and task_node == node_name:
-            if not hasattr(task, "sim_logs") or task.sim_logs is None:
-              task.sim_logs = []
-            # 避免重复添加
-            already_in = any(
-              getattr(log, "sim_id", None) == sim_id or getattr(log, "job_id", None) == job_id
-              for log in task.sim_logs
-            )
-            if not already_in:
-              task.add_sim(sim_info)
-              print(f"[VCM] sim_id '{sim_id}' assigned to task on node '{node_name}'.")
-            found_task = True
-            break
+          # 只分配到node匹配的task，且避免重复
+          found_task = False
+          for task in task_items:
+            task_node = task.current_host
+            if task_node and task_node == node_name:
+              if not hasattr(task, "sim_logs") or task.sim_logs is None:
+                task.sim_logs = []
+              # 避免重复添加
+              already_in = any(
+                getattr(log, "sim_id", None) == sim_id or getattr(log, "job_id", None) == job_id
+                for log in task.sim_logs
+              )
+              if not already_in:
+                task.add_sim(sim_info)
+                print(f"[VCM] sim_id '{sim_id}' assigned to task on node '{node_name}'.")
+              found_task = True
+              break
 
-        if not found_task:
-          print(f"[VCM] Warning: No task found for node '{node_name}', sim_id '{sim_id}' not assigned.")
+          if not found_task:
+            print(f"[VCM] Warning: No task found for node '{node_name}', sim_id '{sim_id}' not assigned.")
+          else:
+            sims_to_remove.append(sim_info)
         else:
-          sims_to_remove.append(sim_info)
+          print(f"[VCM] sim_id '{sim_id}' (job_id '{job_id}'): Simulation log file '{sim_log_path}' not found.")
       else:
-        print(f"[VCM] sim_id '{sim_id}' (job_id '{job_id}'): Simulation log file '{sim_log_path}' not found.")
-    else:
-      print(f"[VCM] sim_id '{sim_id}' (job_id '{job_id}'): Status is '{status}', not update.")
+        print(f"[VCM] sim_id '{sim_id}' (job_id '{job_id}'): Status is '{status}', not update.")
 
-  # 从 sims 中移除已归档的 sim
-  for sim in sims_to_remove:
-    if sim in sim_items:
-      sim_items.remove(sim)
+    # 从 sims 中移除已归档的 sim
+    for sim in sims_to_remove:
+      if sim in sim_items:
+        sim_items.remove(sim)
 
-  # 写回 regr_item 并保存
-  regr_item.set_sims(sim_items)
-  regr_item.set_tasks(task_items)
-  regr_item.save_to_file()
+    # 写回 regr_item 并保存
+    regr_item.set_sims(sim_items)
+    regr_item.set_tasks(task_items)
+    regr_list.update_regr(regr_item)
+    
+  # 保存更新后的回归记录
+  regr_list.save_to_file()
   print("[VCM] Simulation info updated and saved to regr_item.")

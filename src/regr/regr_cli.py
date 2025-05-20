@@ -80,6 +80,16 @@ class RegrCLI:
       ) 
 
     elif args.subcommand == 'update_slurm_info':
+      if str(args.part_mode) not in ["multi", "single"]:
+        self.logger.log(f"Invalid part_mode '{args.part_mode}'. Must be 'multi' or 'single'.", level="ERROR")
+        return
+      if not all([str(args.part_name), str(args.node_name), str(args.work_name), str(args.work_url)]):
+        self.logger.log("Part name, node name, project name and project URL cannot be None.", level="ERROR")
+        return
+      if not str(args.case_list):
+        self.logger.log("Case list cannot be None.", level="ERROR")
+        return
+    
       self.service.update_slurm_info(
         args.part_name, args.part_mode,
         args.node_name, args.work_name, args.work_url,

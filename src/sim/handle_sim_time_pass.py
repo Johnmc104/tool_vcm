@@ -7,7 +7,7 @@ from item.sim_item import SimItem
 from utils.utils_env import check_sim_single_function_result, check_sim_single_timing_result
 import subprocess
 from utils.utils_log import Logger
-from typing import List
+from item.regr_list_item import RegrListItem
 
 def process_single_sim_info(logger:Logger, args, sim_manager, sim_info, post_flag):
   sim_id = sim_info.get("sim_id")
@@ -97,41 +97,47 @@ def get_job_elapsed_time(job_id):
 def handle_sim_time_pass(cursor, logger:Logger, args):
   sim_manager = SimManager(cursor)
 
-  task_items : List[TaskItem]
-  sim_items: List[SimItem]
+  task_items : list[TaskItem]
+  sim_items: list[SimItem]
+  task_item : TaskItem
+  regr_items: list[RegrItem]
 
   if os.path.basename(os.getcwd()) != "slurm":
     logger.log("Current directory must be 'slurm'.", level="ERROR")
     return
 
-  regr_item = RegrItem.load_from_file()
-  task_items = regr_item.get_tasks()
-  if not task_items or not isinstance(task_items, list):
-    logger.log("No task_item data found in regr_item.", level="ERROR")
-    return
+  regr_list = RegrListItem.load_from_file()
+  regr_items = regr_list.get_regrs()
 
-  task_item : TaskItem
-  for task_item in task_items:
-    sim_items = task_item.get_sims()
-    if sim_items is None:
-      logger.log("No sim_items found in a task_item.", level="ERROR")
-      continue
-  
-    status_post = getattr(task_item, "status_post", "False")
-    post_flag = False if status_post in ("False", "None") else True
-  
-    sim_item : SimItem
-    for sim_item in sim_items:
-      # sim_item 是 SimItem 实例
-      sim_info = sim_item.to_dict()
-      if sim_item.status == "TODO":
-        sim_info = process_single_sim_info(logger, args, sim_manager, sim_info, post_flag)
-        # 直接更新 sim_item 的属性
-        sim_item.status = sim_info.get("status", sim_item.status)
-        sim_item.sim_result = sim_info.get("sim_result", sim_item.sim_result)
-        sim_item.sim_log = sim_info.get("sim_log", sim_item.sim_log)
-      else:
-        logger.log(f"sim_id '{sim_item.sim_id}' has already been processed, skipping.", level="INFO")
+  for regr_item in regr_items:
+    task_items = regr_item.get_tasks()
+    if not task_items or not isinstance(task_items, list):
+      logger.log("No task_item data found in regr_item.", level="ERROR")
+      return
 
-  # 保存整个 regr_item
-  regr_item.save_to_file()
+    for task_item in task_items:
+      sim_items = task_item.get_sims()
+      if sim_items is None:
+        logger.log("No sim_items found in a task_item.", level="ERROR")
+        continue
+    
+      status_post = getattr(task_item, "status_post", "False")
+      post_flag = False if status_post in ("False", "None") else True
+    
+      sim_item : SimItem
+      for sim_item in sim_items:
+        # sim_item 是 SimItem 实例
+        sim_info = sim_item.to_dict()
+        if sim_item.status == "TODO":
+          sim_info = process_single_sim_info(logger, args, sim_manager, sim_info, post_flag)
+          # 直接更新 sim_item 的属性
+          sim_item.status = sim_info.get("status", sim_item.status)
+          sim_item.sim_result = sim_info.get("sim_result", sim_item.sim_result)
+          sim_item.sim_log = sim_info.get("sim_log", sim_item.sim_log)
+        else:
+          logger.log(f"sim_id '{sim_item.sim_id}' has already been processed, skipping.", level="INFO")
+    # 更新 task_item 的状态
+    regr_list.update_regr(regr_item)
+
+  # 保存整个 regr_list
+  regr_list.save_to_file()

@@ -82,6 +82,15 @@ class RegrItem(BaseItem):
       data = json.load(f)
     return cls.from_dict(data)
   
+  def update_slurm_info(self, part_name, part_mode, node_name, work_name, work_url, case_list):
+    """更新 SLURM 信息"""
+    self.part_name = part_name
+    self.part_mode = part_mode
+    self.node_name = node_name
+    self.work_name = work_name
+    self.work_url = work_url
+    self.case_list = case_list
+  
   def get_sims(self):
     """返回所有 sim 的列表"""
     return self.sims

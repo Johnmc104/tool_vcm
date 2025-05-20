@@ -32,6 +32,16 @@ class RegrListItem:
       if r.regr_id == regr_id:
         return r
     return None
+  
+  def get_regr_first(self):
+    if len(self.regrs) == 0:
+      return None
+    return self.regrs[0]
+  
+  def get_regr_last(self):
+    if len(self.regrs) == 0:
+      return None
+    return self.regrs[-1]
 
   def remove_regr(self, regr_id):
     self.regrs = [r for r in self.regrs if r.regr_id != regr_id]

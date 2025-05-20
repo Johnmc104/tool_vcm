@@ -6,10 +6,10 @@ from utils.utils_git import get_module_name, get_git_info
 from utils.utils_env import get_comp_corner, determine_regr_type, check_comp_result, get_node_info
 from task.task_manager import TaskManager
 from module.module_manager import ModuleManager
-from item.task_item import TaskItem
 from utils.utils_lib import rm_vcm_fail_file, add_vcm_fail_file
 from item.regr_item import RegrItem
 from item.task_item import TaskItem
+from item.regr_list_item import RegrListItem
 from utils.utils_log import Logger
 
 class TaskService:
@@ -112,15 +112,21 @@ class TaskService:
     更新任务的回归 ID。
     ...
     """
-
-    if task_id is None and regr_id is None:
-      #current_dir must be regr
-      current_dir_name = os.path.basename(os.getcwd())
-      if not current_dir_name.startswith("slurm"):
-        self.logger.log("Current directory must be slurm.", level="ERROR")
-        return
+    regr_item: RegrItem
+    
+    #current_dir must be regr
+    current_dir_name = os.path.basename(os.getcwd())
+    if not current_dir_name.startswith("slurm"):
+      self.logger.log("Current directory must be slurm.", level="ERROR")
+      return
       
-      regr_item = RegrItem.load_from_file()
+    regr_list = RegrListItem.load_from_file()
+    regr_items = regr_list.get_regrs()
+    if not regr_items:
+      self.logger.log("No regression items found.", level="ERROR")
+      return
+    
+    for regr_item in regr_items:
       regr_id = regr_item.regr_id
       user_name = regr_item.current_user
 
@@ -154,13 +160,10 @@ class TaskService:
         self.manager.update_task_regr_id(task_id, True, regr_id)
         self.logger.log(f"Task ID '{task_id}' updated with regr ID '{regr_id}'.", level="INFO")
 
-        regr_item.tasks = [t for t in regr_item.tasks if t.task_id != task_id]
-        regr_item.tasks.append(task_item)
+        regr_item.add_task(task_item)
+      regr_list.update_regr(regr_item)
         
-    else:
-      self.manager.update_task_regr_id(task_id, False, regr_id)
-
-    regr_item.save_to_file()
+    regr_list.save_to_file()
 
   def list_tasks(self, count=None):
     return self.manager.list_tasks(limit=count)
