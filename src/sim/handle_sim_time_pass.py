@@ -124,11 +124,14 @@ def handle_sim_time_pass(cursor, logger:Logger, args):
     for sim_item in sim_items:
       # sim_item 是 SimItem 实例
       sim_info = sim_item.to_dict()
-      sim_info = process_single_sim_info(logger, args, sim_manager, sim_info, post_flag)
-      # 直接更新 sim_item 的属性
-      sim_item.status = sim_info.get("status", sim_item.status)
-      sim_item.sim_result = sim_info.get("sim_result", sim_item.sim_result)
-      sim_item.sim_log = sim_info.get("sim_log", sim_item.sim_log)
+      if sim_item.status == "TODO":
+        sim_info = process_single_sim_info(logger, args, sim_manager, sim_info, post_flag)
+        # 直接更新 sim_item 的属性
+        sim_item.status = sim_info.get("status", sim_item.status)
+        sim_item.sim_result = sim_info.get("sim_result", sim_item.sim_result)
+        sim_item.sim_log = sim_info.get("sim_log", sim_item.sim_log)
+      else:
+        logger.log(f"sim_id '{sim_item.sim_id}' has already been processed, skipping.", level="INFO")
 
   # 保存整个 regr_item
   regr_item.save_to_file()
