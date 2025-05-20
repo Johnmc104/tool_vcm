@@ -1,5 +1,5 @@
 from info.info_service import InfoService
-
+from utils.utils_env import get_job_status_name
 class InfoCLI:
   def __init__(self, cursor, logger):
     self.cursor = cursor
@@ -49,6 +49,13 @@ class InfoCLI:
           ("work_name", "slurm work name"),
           ("module_name", "Name of the module", {"nargs": "?"})
         ]
+      },
+      "jobstatus":{
+        "help": "get job status.",
+        "usage": "%(prog)s <job_id>",
+        "arguments": [
+          ("job_id", "slurm job id")
+        ]
       }
     }
 
@@ -73,5 +80,13 @@ class InfoCLI:
       self.service._handle_createlist(args)
     elif args.subcommand == "checkcomp":
       self.service._handle_checkcomp(args)
+    elif args.subcommand == "jobstatus":
+      job_id = args.job_id
+      status, node_name = get_job_status_name(job_id)
+      if status is None:
+        print(f"[VCM] Error: Job ID '{job_id}' not found.")
+      else:
+        print(f"[VCM] Job ID: {job_id}, Status: '{status}', Node: '{node_name}'")
+      
     else:
       print("[VCM] Unknown command. Use '-h' for help.")

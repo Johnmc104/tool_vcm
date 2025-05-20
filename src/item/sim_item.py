@@ -5,15 +5,18 @@ from constants import get_current_time
 
 class SimItem(BaseItem):
   def __init__(self, 
-    sim_id, case_name, case_seed, job_id, status="None", sim_log="None", check_result=None, created_time=None
+    sim_id, case_name, case_seed, 
+    job_id, job_status="None",
+    status="None", sim_log="None", sim_result=None, created_time=None
   ):
     self.sim_id = sim_id
     self.case_name = case_name
     self.case_seed = case_seed
     self.job_id = job_id
+    self.job_status = job_status
     self.status = status
     self.sim_log = sim_log
-    self.check_result = check_result
+    self.sim_result = sim_result
     self.created_time = created_time if created_time is not None else get_current_time()
 
   def to_dict(self):
@@ -22,9 +25,10 @@ class SimItem(BaseItem):
       "case_name": self.case_name,
       "case_seed": self.case_seed,
       "job_id": self.job_id,
+      "job_status": self.job_status,
       "status": self.status,
       "sim_log": self.sim_log,
-      "check_result": self.check_result,
+      "sim_result": self.sim_result,
       "created_time": self.created_time
     }
 
@@ -35,9 +39,10 @@ class SimItem(BaseItem):
       case_name=data.get("case_name"),
       case_seed=data.get("case_seed"),
       job_id=data.get("job_id"),
+      job_status=data.get("job_status", "None"),
       status=data.get("status", "None"),
       sim_log=data.get("sim_log", "None"),
-      check_result=data.get("check_result"),
+      sim_result=data.get("sim_result"),
       created_time=data.get("created_time")
     )
 

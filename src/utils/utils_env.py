@@ -4,6 +4,7 @@ import random
 from glob import glob
 from constants import NODE_MAP, get_current_user,get_current_dir, VCM_TASK_FILENAME
 from constants import check_vtool_home
+import subprocess
 
 def determine_regr_type(logger):
   """
@@ -338,3 +339,28 @@ def get_sim_log_time(log_path):
       if "Simulation time" in line:
         time_info.append(line.strip())
   return time_info
+
+def get_job_status_name(job_id):
+  # 查询 job 状态
+  try:
+    job_check = subprocess.check_output(
+      ['sacct', '-n', '-j', job_id, '-o', 'state', '--noheader'],
+      stderr=subprocess.STDOUT
+    ).decode().strip().split('\n')[-1]
+
+    job_check = job_check.replace(" ", "")
+  except subprocess.CalledProcessError:
+    print(f"[VCM] Job {job_id} does not exist")
+    return 
+
+  if job_check == "COMPLETED":
+    job_node = subprocess.check_output(
+      ['sacct', '-j', job_id, '--format=NodeList'],
+      stderr=subprocess.STDOUT
+    ).decode().strip().split('\n')[-1].replace(" ", "")
+    job_status = "OK"
+  else:
+    job_node = ""
+    job_status = "TODO"
+
+  return job_status, job_node, job_check

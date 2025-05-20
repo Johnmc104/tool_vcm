@@ -4,6 +4,7 @@ from constants import NODE_MAP
 from item.regr_item import RegrItem
 from item.sim_item import SimItem
 from item.task_item import TaskItem
+from utils.utils_env import get_job_status_name
 
 def get_regr_node_name(status_log_path="status_check.log"):
   jobid_sim_map = {}
@@ -54,10 +55,9 @@ def get_regr_sim_log_path(node_name, user_name, work_name, case_name, case_seed)
     )
   return file_path
 
-
 def handle_update_node_dir(cursor, args):
-  sim_items : list[SimItem]
-  task_items : list[TaskItem]
+  sim_items: list[SimItem]
+  task_items: list[TaskItem]
 
   if os.path.basename(os.getcwd()) != "slurm":
     print("[VCM] Error: Current directory must be 'slurm'.")
@@ -67,11 +67,6 @@ def handle_update_node_dir(cursor, args):
   sim_items = regr_item.get_sims()
   if not sim_items:
     print("[VCM] Error: No simulation data found in regr_item.")
-    return
-
-  node_sim_map = get_regr_node_name()
-  if not node_sim_map:
-    print("[VCM] Error: Unable to parse node name or simulation directory from log.")
     return
 
   task_items = regr_item.get_tasks()
@@ -87,14 +82,17 @@ def handle_update_node_dir(cursor, args):
       print(f"[VCM] Warning: sim_id '{sim_id}' has no job_id, skipping.")
       continue
 
-    node_info = node_sim_map.get(job_id)
-    if not node_info:
-      print(f"[VCM] Warning: job_id '{job_id}' not found in node_sim_map, skipping.")
+    # 通过 get_job_status_name 获取 status 和 node_name
+    status, node_name, job_status = get_job_status_name(job_id)
+    if status is None or node_name is None:
+      print(f"[VCM] Warning: job_id '{job_id}' status not found, skipping.")
       continue
+    sim_info.job_status = job_status
 
-    status = node_info["status"]
-    node_name = node_info["node_name"]
-    case_name = node_info["case_name"]
+    case_name = getattr(sim_info, "case_name", None)
+    if not case_name:
+      print(f"[VCM] Warning: sim_id '{sim_id}' has no case_name, skipping.")
+      continue
 
     if status == "OK":
       case_seed = sim_info.case_seed

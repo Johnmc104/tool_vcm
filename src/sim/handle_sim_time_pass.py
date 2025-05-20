@@ -22,7 +22,7 @@ def process_single_sim_info(logger:Logger, args, sim_manager, sim_info, post_fla
   if fun_result is None or tim_result is None:
     logger.log(f"sim_id '{sim_id}' has no function or timing result, skipping.", level="WARNING")
     sim_info["status"] = "CheckFail"
-    sim_info["check_result"] = "Unknown"
+    sim_info["sim_result"] = "Unknown"
     return sim_info
 
   #logger.log(f"sim_id '{sim_id}' function result: {fun_result}, timing result: {tim_result}", level="INFO")
@@ -47,18 +47,18 @@ def process_single_sim_info(logger:Logger, args, sim_manager, sim_info, post_fla
   if sim_time is None:
     logger.log(f"sim_id '{sim_id}' has no elapsed time, skipping.", level="WARNING")
     sim_info["status"] = "CheckFail"
-    sim_info["check_result"] = "Unknown"
+    sim_info["sim_result"] = "Unknown"
     return sim_info
   
   # 检查结果
   if total_result == 0:
     sim_info["status"] = "CheckDone"
-    sim_info["check_result"] = "Pass"
+    sim_info["sim_result"] = "Pass"
     sim_manager.update_sim_time_pass(sim_id, sim_time, fun_result, tim_result, True)
     logger.log(f"sim_id '{sim_id}' function result: {fun_result}, timing result: {tim_result}, check pass", level="INFO")
   else:
     sim_info["status"] = "CheckDone"
-    sim_info["check_result"] = "Fail"
+    sim_info["sim_result"] = "Fail"
     sim_manager.update_sim_time_pass(sim_id, sim_time, fun_result, tim_result, False)
     logger.log(f"sim_id '{sim_id}' has error in function or timing result. at {sim_log}", level="ERROR")
   return sim_info
@@ -127,7 +127,7 @@ def handle_sim_time_pass(cursor, logger:Logger, args):
       sim_info = process_single_sim_info(logger, args, sim_manager, sim_info, post_flag)
       # 直接更新 sim_item 的属性
       sim_item.status = sim_info.get("status", sim_item.status)
-      sim_item.check_result = sim_info.get("check_result", sim_item.check_result)
+      sim_item.sim_result = sim_info.get("sim_result", sim_item.sim_result)
       sim_item.sim_log = sim_info.get("sim_log", sim_item.sim_log)
 
   # 保存整个 regr_item
