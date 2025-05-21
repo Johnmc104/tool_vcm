@@ -8,8 +8,9 @@ from utils.utils_env import check_sim_single_function_result, check_sim_single_t
 import subprocess
 from utils.utils_log import Logger
 from item.regr_list_item import RegrListItem
+from sim.sim_manager import SimManager
 
-def process_single_sim_info(logger:Logger, args, sim_manager, sim_info, post_flag):
+def process_single_sim_info(logger:Logger, args, sim_manager: SimManager, sim_info, post_flag):
   sim_id = sim_info.get("sim_id")
   job_id = sim_info.get("job_id")
   sim_log = sim_info.get("sim_log")

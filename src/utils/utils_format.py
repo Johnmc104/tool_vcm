@@ -1,5 +1,8 @@
 import matplotlib.pyplot as plt
 from collections import defaultdict
+from item.regr_list_item import RegrListItem
+from item.regr_item import RegrItem
+from item.task_item import TaskItem
 
 def fetch_with_headers(cursor, sql, params=()):
   """
@@ -208,3 +211,64 @@ def print_table(headers, rows):
   for row in rows:
     print(" | ".join(str(row[i]).ljust(col_widths[i]) for i in range(len(headers))))
   print(line)
+
+def print_regr_case_status(regr_list_item: RegrListItem):
+  """
+  按regr分组统计并打印每个回归下case（task）的状态分布。
+  包括：等待数、已完成检查数、检查通过/失败数，并以表格形式展示详细case状态。
+  """
+  regr: RegrItem
+  t : TaskItem
+
+  for regr in regr_list_item.get_regrs():
+    # 统计waiting
+    waiting = sum(1 for sim in getattr(regr, "sims", []) if getattr(sim, "status", "") == "TODO")
+    tasks = regr.get_tasks()
+    total = len(tasks)
+    sim_ok = 0
+    sim_todo = 0
+    check_done = 0
+    check_pass = 0
+    check_fail = 0
+
+    for t in tasks:
+      for sim in t.get_sim_logs():
+        status = getattr(sim, "status", "")
+        sim_result = getattr(sim, "sim_result", "")
+        if status == "OK":
+          sim_ok += 1
+        elif status == "TODO":
+          sim_todo += 1
+        elif status in ("CheckDone", "CheckFail"):
+          check_done += 1
+          if sim_result == "Pass":
+            check_pass += 1
+          elif sim_result == "Fail":
+            check_fail += 1
+
+    print(f"[VCM] regr_id: {regr.regr_id} - {regr.module_name} - {regr.case_list}")
+    print(f"  Post: {regr.get_tasks()[0].status_post}, SDF: {regr.work_name}")
+    print(f"  Total task : {total}")
+    print(f"  Sim Pending: {waiting}")
+    print(f"  Sim Finish : {sim_ok}")
+    print(f"  Sim Checked: {check_done} (Pass: {check_pass}, Fail: {check_fail})")
+
+    # 表格打印详细case状态
+    headers = ["TaskID", "Finished", "TODO", "Checck Pass", "Check Fail", "Sim Total"]
+    rows = []
+    for t in tasks:
+      logs = t.get_sim_logs()
+      ok = sum(1 for sim in logs if getattr(sim, "status", "") == "OK")
+      todo = sum(1 for sim in logs if getattr(sim, "status", "") == "TODO")
+      pass_cnt = sum(1 for sim in logs if getattr(sim, "status", "") in ("CheckDone", "CheckFail") and getattr(sim, "sim_result", "") == "Pass")
+      fail_cnt = sum(1 for sim in logs if getattr(sim, "status", "") in ("CheckDone", "CheckFail") and getattr(sim, "sim_result", "") == "Fail")
+      rows.append([t.task_id, ok, todo, pass_cnt, fail_cnt, len(logs)])
+
+    print_table(headers, rows)
+
+    # show fail case name, and log_path
+    for t in tasks:
+      logs = t.get_sim_logs()
+      for sim in logs:
+        if getattr(sim, "sim_result", "") == "Fail":
+          print(f"  [Fail] sim{sim.sim_id}: {sim.case_name} - {sim.case_seed} - {sim.sim_log}")

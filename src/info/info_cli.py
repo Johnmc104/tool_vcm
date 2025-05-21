@@ -56,6 +56,13 @@ class InfoCLI:
         "arguments": [
           ("job_id", "slurm job id")
         ]
+      },
+      "regrlist":{
+        "help": "get regression list, print all regression info.",
+        "usage": "%(prog)s [module_name]",
+        "arguments": [
+          ("module_name", "Module name", {"nargs": "?"})
+        ]
       }
     }
 
@@ -87,6 +94,7 @@ class InfoCLI:
         print(f"[VCM] Error: Job ID '{job_id}' not found.")
       else:
         print(f"[VCM] Job ID: {job_id}, Status: '{status}', Node: '{node_name}'")
-      
+    elif args.subcommand == "regrlist":
+      self.service._handle_regrlist(args)
     else:
       print("[VCM] Unknown command. Use '-h' for help.")

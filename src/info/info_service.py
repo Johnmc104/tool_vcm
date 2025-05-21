@@ -7,13 +7,18 @@ from constants import get_current_user
 from utils.utils_case import find_case_sw_info
 from utils.utils_lib import rm_vcm_fail_file, add_vcm_fail_file
 from utils.utils_env import check_regr_comp_result
+from utils.utils_log import Logger
+from item.regr_list_item import RegrListItem
+from utils.utils_format import print_regr_case_status
+from constants import VCM_REGR_FILENAME
+
 
 class InfoService:
   """
   This class provides methods to retrieve information about the VCM system.
   """
 
-  def __init__(self, cursor, logger):
+  def __init__(self, cursor, logger: Logger):
     self.cursor = cursor
     self.logger = logger
     self.module_manager = ModuleManager(cursor)
@@ -102,4 +107,21 @@ class InfoService:
       return
     else:
       print(f"[VCM] Compile successful.")
+
+  def _handle_regrlist(self, args):
+    """
+    """
+
+    # check regr_list file exist
+    if not os.path.exists(VCM_REGR_FILENAME):
+      self.logger.log("No regression list file found.", level="ERROR")
+      return
+
+    # Check if the regression ID exists
+    regr_list = RegrListItem.load_from_file()
+    if not regr_list:
+      self.logger.log("No regression list found.", level="ERROR")
+      return
+    
+    print_regr_case_status(regr_list)
     

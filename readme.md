@@ -2,7 +2,7 @@ Verification Case Management System (VCM) 详细说明
 
 # 一、系统简介
 
-VCM（Verification Case Management System）是面向数字验证仿真流程的信息管理工具，覆盖项目、模块、用例、任务、仿真等环节。系统以 SQLite 为核心数据库，配合 Python CLI 工具和 Makefile 自动化脚本，支持本地单次仿真和集群回归仿真两大场景，自动采集、统计和可视化仿真过程数据。
+VCM（Verification Case Management System）是面向数字验证仿真流程的信息管理系统，覆盖项目、模块、用例、任务、仿真等环节。系统以 SQLite 为核心数据库，配合 Python CLI 工具和 Makefile 自动化脚本，支持本地单次仿真和集群回归仿真两大场景，自动采集、统计和可视化仿真过程数据。
 
 ## 1.1 功能概述
 
@@ -119,73 +119,191 @@ vcm sim add_basic_single --sim_time <仿真耗时>
 - 以上流程确保每次仿真都能与唯一的任务信息关联，便于后续统计、追溯和报告生成。  
 - 详细字段和数据库结构请参考 readme.md 第四章“数据库结构”部分。
 
-## 3.2 回归仿真（slurm）
+## 3.2 回归仿真流程（slurm）
 
-### 3.2.1 环境准备
-- `make build_ssh`  
-  远程构建环境、拉取代码、登记项目与模块、检查编译。
+### 3.2.1. 环境准备与回归任务登记
 
-### 3.2.2 用例与任务管理
-- `make checkcase`  
-  采集用例列表，登记到数据库。
-- `vcm regr add slurm`  
-  新增回归任务。
-- `vcm regr update_slurm_info ...`  
-  更新回归任务的集群信息。
-- `vcm task update_regr_id`  
-  关联任务与回归ID。
+- **命令**：`make build_ssh`
+- **作用**：远程构建仿真环境，拉取代码，登记项目与模块，检查编译。
+- **相关代码**：自动化脚本（Makefile），涉及项目、模块登记（`vcm project add`、`vcm module add`）。
 
-### 3.2.3 批量仿真与状态采集
-- `make regr`  
-  批量提交所有用例仿真任务。
-- `make status`  
-  自动采集所有仿真状态，批量写入数据库。
-- `vcm sim add_basic_regr`  
-  批量采集回归仿真日志。
-- `vcm sim update_node_dir`  
-  更新仿真节点与目录信息。
+#### 1. 新增回归任务
+- **命令**：`vcm regr add slurm`
+- **作用**：为当前模块创建一条新的回归任务记录。
+- **关键数据**：生成回归ID，写入`regr_info`表，并在本地JSON（如`vcm_regr_info.json`）中同步。
+- **代码入口**：regr_service.py 的 `add_regr` 方法。
 
-### 3.2.4 仿真结果统计
-- `vcm sim update_time_pass`  
-  统计所有仿真时间、错误数、通过状态，更新数据库。
+#### 2. 更新回归任务集群信息
+- **命令**：`vcm regr update_slurm_info ...`
+- **作用**：补充/更新回归任务的分区、节点、用例列表等SLURM相关信息。
+- **关键数据**：更新`regr_info`表和本地JSON。
+- **代码入口**：regr_service.py 的 `update_slurm_info` 方法。
 
-### 3.2.5 报告与可视化
-- `vcm project report <project_name>`  
-  生成项目详细报告。
-- `vcm module report <module_name>`  
-  生成模块报告。
-- `vcm case report <case_name>`  
-  生成用例报告。
+#### 3. 任务与回归ID关联
+- **命令**：`vcm task update_regr_id`
+- **作用**：将已登记的任务与回归ID进行关联，便于后续仿真数据归档。
+- **关键数据**：更新`tasks`表的`regr_id`字段。
 
 ---
 
-### 常用命令速查
+### 3.2.2. 批量仿真任务提交
 
-- `vcm init`  
-  自动初始化项目和模块。
-- `vcm info checkcomp ...`  
-  检查编译状态。
-- `vcm info caselist <case_list>`  
-  采集用例列表。
-- `vcm sim add_basic_regr`  
-  批量采集回归仿真数据。
-- `vcm sim update_node_dir`  
-  更新仿真节点与目录。
-- `vcm sim update_time_pass`  
-  统计仿真时间与通过状态。
-- `vcm regr add slurm`  
-  新增回归任务。
-- `vcm regr update_slurm_info ...`  
-  更新回归任务集群信息。
-- `vcm task update_regr_id`  
-  任务与回归ID关联。
+- **命令**：`make regr`
+- **作用**：批量提交所有用例的仿真任务到SLURM集群。
+- **关键数据**：生成作业(job)并记录job_id，通常写入`status.log`等文件。
+
+#### 1. 批量提交集群作业基础信息
+- **命令**：`vcm sim add_basic_regr`
+- **作用**：根据`status.log`和`log/reg_info.log`，批量采集仿真日志，登记到数据库和本地JSON。
+- **关键数据**：写入`sim_info`表，生成`SimItem`，更新`RegrItem`。
+- **代码入口**：handle_add_basic_regr.py 的 `handle_add_basic_regr`。
+
 ---
+
+### 3.2.3. 仿真节点与目录信息采集
+
+- **命令**：`make status`
+- **作用**：自动采集所有仿真任务的状态，更新`status_check.log`等。
+- **关键数据**：采集job状态、节点名等。
+
+#### 1. 更新仿真节点与目录
+- **命令**：`vcm sim update_node_dir`
+- **作用**：根据最新的状态日志，更新每个仿真任务的节点名、目录、日志路径等信息。
+- **关键数据**：更新`sim_info`表的`job_dir`、`job_id`、`node_name`等字段。
+- **代码入口**：handle_update_node_dir.py 的 `handle_update_node_dir`。
+
+---
+
+### 3.2.4. 仿真结果统计与判定
+
+- **命令**：`make check_sim`
+- **作用**：统计所有已完成仿真的时间、错误数、通过状态等。
+- **关键数据**：采集仿真耗时、错误数、通过状态等。
+
+#### 1. 更新仿真统计信息
+- **命令**：`vcm sim update_time_pass`
+- **作用**：批量统计仿真时间、错误数、通过状态，写入数据库。
+- **关键数据**：更新`sim_info`表的`sim_time`、`error_num`、`is_pass`等字段。
+- **代码入口**：handle_sim_time_pass.py 的 `handle_sim_time_pass`。
+
+---
+
+### 3.2.5. 生成报告与可视化
+
+- **命令**：`make report`
+- **作用**：生成项目、模块、用例等多维度的详细报告。
+- **关键数据**：汇总数据库中的仿真、任务、回归等信息，生成HTML或表格报告。
+
+#### 1. 查询回归列表
+- **命令**：`vcm info regrlist`
+- **作用**：查询当前所有回归任务及其状态，便于追踪和管理。
+
+---
+
+## 总结流程图
+
+```mermaid
+graph TD
+  subgraph Make命令
+    A[make build_ssh]
+    E[make regr]
+    G[make status]
+    I[make check_sim]
+    K[make report]
+  end
+
+  subgraph VCM命令
+    B[vcm regr add slurm]
+    C[vcm regr update_slurm_info]
+    D[vcm task update_regr_id]
+    F[vcm sim add_basic_regr]
+    H[vcm sim update_node_dir]
+    J[vcm sim update_time_pass]
+    L[vcm info regrlist]
+  end
+
+  %% Make -> VCM 调用关系
+  A -- 调用 --> B
+  B -- 创建回归任务 --> C
+  C -- 更新回归信息--> D
+  D -- 更新task regr映射关系 --> E
+  E -- 批量提交仿真任务 --> F
+  F -- 创建仿真信息 --> G
+  G -- 获取节点信息 --> H
+  H -- 更新节点目录 --> I
+  I -- 检查 --> J
+  J -- 更新检查数据 --> K
+  K -- 生成报告 --> L
+```
+
+---
+
+## 代码与数据流核心说明
+
+- **回归任务（RegrItem）**：通过`vcm regr add slurm`和`update_slurm_info`登记，管理用例列表、节点、分区等信息。
+- **仿真任务（SimItem）**：通过`vcm sim add_basic_regr`批量采集，后续通过`update_node_dir`和`update_time_pass`补全节点、目录、统计信息。
+- **数据库表**：`regr_info`、`sim_info`、`tasks`等，贯穿整个流程。
+- **本地JSON**：如`vcm_regr_info.json`，用于缓存和追踪回归任务状态。
+
+---
+
+## 典型命令速查
+
+- `make build_ssh`：环境准备
+- `vcm regr add slurm`：新增回归任务
+- `vcm regr update_slurm_info ...`：补充集群信息
+- `vcm task update_regr_id`：任务与回归ID关联
+- `make regr`：批量提交仿真
+- `vcm sim add_basic_regr`：采集仿真日志
+- `make status`：采集仿真状态
+- `vcm sim update_node_dir`：更新节点与目录
+- `make check_sim`：统计仿真结果
+- `vcm sim update_time_pass`：更新统计信息
+- `make report`：生成报告
+- `vcm info regrlist`：查询回归列表
+
+----
 
 # 四、数据库结构
 
 VCM 系统数据库基于 SQLite，主要包含以下表和视图：
 
-![流程图说明](./doc/db.png)
+```mermaid
+erDiagram
+    PROJECTS ||--o{ MODULES : 包含
+    MODULES ||--o{ CASES : 包含
+    MODULES ||--o{ REGRS : 包含
+    MODULES ||--o{ TASKS : 包含
+    REGRS ||--o{ TASKS : 关联
+    TASKS ||--o{ SIMS : 产生
+    CASES ||--o{ SIMS : 产生
+
+    PROJECTS {
+        int project_id PK
+    }
+    MODULES {
+        int module_id PK
+        int project_id FK
+    }
+    CASES {
+        int case_id PK
+        int module_id FK
+    }
+    REGRS {
+        int regr_id PK
+        int module_id FK
+    }
+    TASKS {
+        int task_id PK
+        int module_id FK
+        int regr_id FK
+    }
+    SIMS {
+        int sim_id PK
+        int case_id FK
+        int task_id FK
+    }
+```
 
 ## 4.1 主要表结构
 
@@ -256,13 +374,7 @@ VCM 系统数据库基于 SQLite，主要包含以下表和视图：
   - 所有命令的实际处理逻辑由各功能模块实现，vcm_cli.py 仅负责参数解析与分发。
   - 新增功能时需在此文件注册对应子命令，并在相应模块实现处理函数。
 
----
 
-## 5.2. 仿真服务与数据库操作
-
-
-
----
 
 # 六、Makefile 自动化脚本注意事项
 
