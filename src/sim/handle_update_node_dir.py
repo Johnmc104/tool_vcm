@@ -6,6 +6,7 @@ from item.sim_item import SimItem
 from item.task_item import TaskItem
 from item.regr_list_item import RegrListItem
 from utils.utils_env import get_job_status_name
+from sim.sim_manager import SimManager
 
 def get_regr_node_name(status_log_path="status_check.log"):
   jobid_sim_map = {}
@@ -60,6 +61,7 @@ def handle_update_node_dir(cursor, args):
   sim_items: list[SimItem]
   task_items: list[TaskItem]
   regr_items: list[RegrItem]
+  sim_manager = SimManager(cursor)
 
   if os.path.basename(os.getcwd()) != "slurm":
     print("[VCM] Error: Current directory must be 'slurm'.")
@@ -119,6 +121,7 @@ def handle_update_node_dir(cursor, args):
             if task_node and task_node == node_name:
               if not hasattr(task, "sim_logs") or task.sim_logs is None:
                 task.sim_logs = []
+
               # 避免重复添加
               already_in = any(
                 getattr(log, "sim_id", None) == sim_id or getattr(log, "job_id", None) == job_id
@@ -126,6 +129,7 @@ def handle_update_node_dir(cursor, args):
               )
               if not already_in:
                 task.add_sim(sim_info)
+                sim_manager.update_sim_task_id(sim_id, task.task_id)
                 print(f"[VCM] sim_id '{sim_id}' assigned to task on node '{node_name}'.")
               found_task = True
               break
@@ -137,7 +141,7 @@ def handle_update_node_dir(cursor, args):
         else:
           print(f"[VCM] sim_id '{sim_id}' (job_id '{job_id}'): Simulation log file '{sim_log_path}' not found.")
       else:
-        print(f"[VCM] sim_id '{sim_id}' (job_id '{job_id}'): Status is '{status}', not update.")
+        print(f"[VCM] sim_id '{sim_id}' (job_id '{job_id}'): job_status is '{job_status}', not update.")
 
     # 从 sims 中移除已归档的 sim
     for sim in sims_to_remove:
@@ -148,7 +152,7 @@ def handle_update_node_dir(cursor, args):
     regr_item.set_sims(sim_items)
     regr_item.set_tasks(task_items)
     regr_list.update_regr(regr_item)
-    
+
   # 保存更新后的回归记录
   regr_list.save_to_file()
   print("[VCM] Simulation info updated and saved to regr_item.")
