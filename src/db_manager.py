@@ -21,7 +21,7 @@ def init_database(cursor):
     CREATE TABLE IF NOT EXISTS projects (
       project_id INTEGER PRIMARY KEY AUTOINCREMENT,
       project_name TEXT NOT NULL,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      created_at TIMESTAMP DEFAULT (DATETIME('now', '+8 hours')),
       created_by TEXT
     )
   ''')
@@ -32,7 +32,7 @@ def init_database(cursor):
       module_id INTEGER PRIMARY KEY AUTOINCREMENT,
       module_name TEXT NOT NULL,
       project_id INTEGER,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      created_at TIMESTAMP DEFAULT (DATETIME('now', '+8 hours')),
       created_by TEXT,
       FOREIGN KEY (project_id) REFERENCES projects(project_id)
     )
@@ -43,7 +43,7 @@ def init_database(cursor):
     CREATE TABLE IF NOT EXISTS case_info (
       case_id INTEGER PRIMARY KEY AUTOINCREMENT,
       module_id INTEGER,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      created_at TIMESTAMP DEFAULT (DATETIME('now', '+8 hours')),
       created_by TEXT,
       case_name TEXT NOT NULL,
       case_c_name TEXT DEFAULT NULL,
@@ -62,7 +62,7 @@ def init_database(cursor):
     CREATE TABLE IF NOT EXISTS regr_info (
       regr_id INTEGER PRIMARY KEY AUTOINCREMENT,
       module_id INTEGER,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      created_at TIMESTAMP DEFAULT (DATETIME('now', '+8 hours')),
       created_by TEXT,
       regr_base TEXT,
       regr_type TEXT,
@@ -81,7 +81,7 @@ def init_database(cursor):
     CREATE TABLE IF NOT EXISTS tasks (
       task_id INTEGER PRIMARY KEY AUTOINCREMENT,
       module_id INTEGER,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      created_at TIMESTAMP DEFAULT (DATETIME('now', '+8 hours')),
       created_by TEXT,
       git_de TEXT,
       git_dv TEXT,
@@ -101,7 +101,7 @@ def init_database(cursor):
       sim_id INTEGER PRIMARY KEY AUTOINCREMENT,
       case_id INTEGER,
       task_id INTEGER,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      created_at TIMESTAMP DEFAULT (DATETIME('now', '+8 hours')),
       created_by TEXT,
       case_seed TEXT,
       job_id INTEGER DEFAULT 0,
@@ -170,8 +170,7 @@ def init_database(cursor):
       tasks.git_de,
       tasks.git_dv,
       tasks.corner_name,
-      tasks.is_regr,
-      tasks.regr_type
+      tasks.is_regr
   FROM 
       modules
   LEFT JOIN 
@@ -196,7 +195,6 @@ def init_database(cursor):
     sim_info.sim_time,
     sim_info.error_num,
     sim_info.timing_num,
-    sim_info.node_name,
     sim_info.job_id
   FROM 
     tasks

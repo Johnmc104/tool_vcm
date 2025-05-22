@@ -18,6 +18,29 @@ class TaskCLI:
           ("comp_log_path", "Path to the comp.log file (optional)", {"nargs": "?"})
         ]
       },
+      "add_only": {
+        "help": "Add a new task. Provide creator's name and optional comp.log path, but do not add to db.",
+        "usage": "%(prog)s [comp_log_path]",
+        "arguments": [
+          ("comp_log_path", "Path to the comp.log file (optional)", {"nargs": "?"})
+        ]
+      },
+      "add_db": {
+        "help": "Add task to db",
+        "usage": "%(prog)s ",
+        "arguments": [
+        ]
+      },
+      "add_db_regr": {
+        "help": "Add task to db with regression",
+        "usage": "%(prog)s [part_name] [part_mode] [node_name] [work_name]",
+        "arguments": [
+          ("part_name", "Part name (e.g., 'digit' or 'edas')"),
+          ("part_mode", "Part mode (e.g., 'single' or 'multi')"),
+          ("node_name", "Node name (e.g., 'digit01', 'eda')"),
+          ("work_name", "Work name (e.g., 'regr')")
+        ]
+      },
       "update_regr_id": {
         "help": "Update the regression ID for a task.",
         "usage": "%(prog)s [task_id] [regr_id]",
@@ -50,6 +73,10 @@ class TaskCLI:
   def handle_task_commands(self, args):
     if args.subcommand == 'add':
       self.service.add_task(args)
+    elif args.subcommand == 'add_only':
+      self.service.add_task_only(args)
+    elif args.subcommand == 'add_db':
+      self.service.commit_task_to_db(args)
     elif args.subcommand == 'update_regr_id':
       if (args.task_id is None) != (args.regr_id is None):
         self.logger.error("--task_id and --regr_id must both be provided or both omitted.", level="ERROR")

@@ -4,12 +4,15 @@ from db_manager import init_database
 import json
 import matplotlib.pyplot as plt
 from collections import defaultdict
-from constants import check_vtool_home
+from constants import check_vtool_home, GEO_EN
 
 def get_db_name(debug=False):
   if debug:
     db_dir = os.path.join(get_current_dir(), "data")
     print(f"[VCM] Debug mode: Using database directory: {db_dir}")
+  elif GEO_EN is True:
+    db_dir = os.path.join("/work204/vcm", "data")
+    print(f"[VCM] Using database directory: {db_dir}")
   else:
     vtool_home = check_vtool_home()
     db_dir = os.path.join(vtool_home, "data")

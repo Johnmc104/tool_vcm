@@ -54,8 +54,12 @@ NODE_MAP = {
   "eda12": "home212",
 }
 
+GEO_EN = False
 AUTH_CODE = "hangzhou"
 VCM_DB_DEFAULT = os.path.join(os.getcwd(), "vcm.db")
 FILE_VCM_TASK = os.path.join(os.getcwd(), "vcm_task_info.json")
 VCM_TASK_FILENAME = "vcm_task_info.json"
 VCM_REGR_FILENAME = "vcm_regr_info.json"
+
+REMOTE_EN = False
+REMOTE_API_URL = "http://example.com/api"

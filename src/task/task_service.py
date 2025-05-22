@@ -19,93 +19,132 @@ class TaskService:
     self.manager = TaskManager(cursor)
     self.module_manager = ModuleManager(cursor)
 
-  def add_task(self, args, comp_file="comp.log", json_file="vcm_task_info.json"):
-    status_log = rm_vcm_fail_file("vcm.comp.fail")
-    
-    json_file_path = os.path.join(os.getcwd(), json_file)
-    current_dir_name = os.path.basename(os.getcwd())
-    current_user = get_current_user()
-    current_host = get_current_host()
+  def _prepare_task_item(self, args, comp_file, json_file, write_db=False):
+      status_log = rm_vcm_fail_file("vcm.comp.fail")
+      json_file_path = os.path.join(os.getcwd(), json_file)
+      current_dir_name = os.path.basename(os.getcwd())
+      current_user = get_current_user()
+      current_host = get_current_host()
 
-    # 检查当前目录
-    if not (current_dir_name.startswith("sim_pre") or current_dir_name.startswith("sim_post") or current_dir_name.startswith("regr")):
-      self.logger.log("Current directory must be sim_pre, sim_post, or regr.", level="ERROR")
-      return
+      # 检查当前目录
+      if not (current_dir_name.startswith("sim_pre") or current_dir_name.startswith("sim_post") or current_dir_name.startswith("regr")):
+          self.logger.log("Current directory must be sim_pre, sim_post, or regr.", level="ERROR")
+          return None
 
-    # 用 TaskItem 读取或初始化
-    task_item = TaskItem.load_from_file(json_file_path)
+      # 用 TaskItem 读取或初始化
+      task_item = TaskItem.load_from_file(json_file_path)
 
-    if current_dir_name.startswith("regr"):
-      task_item.status_regr = "True"
-    else:
-      task_item.status_regr = "False"
-
-    # comp.log 路径
-    comp_log_path = os.path.join(os.getcwd(), comp_file)
-    if not os.path.exists(comp_log_path):
-      self.logger.log(f"comp.log file not found at '{comp_log_path}'.", level="ERROR")
-      return
-    else:
-      comp_result = check_comp_result(self.logger, comp_log_path)
-      if comp_result is False:
-        task_item.status_check = "False"
-        add_vcm_fail_file(status_log, "Error: comp.log file does not contain valid compilation result.")
-        return
+      if current_dir_name.startswith("regr"):
+          task_item.status_regr = "True"
       else:
-        task_item.status_check = "True"
+          task_item.status_regr = "False"
 
-    # 跳过未变更
-    comp_log_mtime_str = datetime.datetime.fromtimestamp(
-      os.path.getmtime(comp_log_path)
-    ).strftime('%Y-%m-%d %H:%M:%S')
-
-    comp_log_changed = (
-      task_item.comp_log_time != comp_log_mtime_str or
-      task_item.current_user != current_user or
-      task_item.current_host != current_host
-    )
-
-    if (
-      not comp_log_changed and
-      task_item.task_id is not None
-    ):
-      self.logger.log("comp.log has not changed and task already added by this user/host. Skipping.", level="INFO")
-      return
-
-    updated = False
-
-    # 初始化任务
-    module_name = get_module_name(args)
-    module_id = self.module_manager.find_module_id_by_name(module_name)
-    git_de, git_dv = get_git_info()
-    task_id = self.manager.add_task_base(module_id, current_user, git_de, git_dv, current_host)
-    task_item.git_de = git_de
-    task_item.git_dv = git_dv
-    task_item.task_id = task_id
-    task_item.clear_sim_logs()
-    self.logger.log("sim_logs cleared due to new compilation.", level="INFO")
-    updated = True
-    
-    # 添加 post
-    if task_item.status_post == "None":
-      corner_name = get_comp_corner(self.logger, comp_log_path)
-      if corner_name is not None:
-        self.manager.update_task_post(task_id, corner_name)
-        task_item.status_post = corner_name
+      # comp.log 路径
+      comp_log_path = os.path.join(os.getcwd(), comp_file)
+      if not os.path.exists(comp_log_path):
+          self.logger.log(f"comp.log file not found at '{comp_log_path}'.", level="ERROR")
+          return None
       else:
-        task_item.status_post = "False"
+          comp_result = check_comp_result(self.logger, comp_log_path)
+          if comp_result is False:
+              task_item.status_check = "False"
+              add_vcm_fail_file(status_log, "Error: comp.log file does not contain valid compilation result.")
+              return None
+          else:
+              task_item.status_check = "True"
+
+      # 跳过未变更
+      comp_log_mtime_str = datetime.datetime.fromtimestamp(
+          os.path.getmtime(comp_log_path)
+      ).strftime('%Y-%m-%d %H:%M:%S')
+
+      comp_log_changed = (
+          task_item.comp_log_time != comp_log_mtime_str or
+          task_item.current_user != current_user or
+          task_item.current_host != current_host
+      )
+
+      if (
+          not comp_log_changed and
+          task_item.task_id is not None
+      ):
+          self.logger.log("comp.log has not changed and task already added by this user/host. Skipping.", level="INFO")
+          return None
+
+      updated = False
+
+      # 初始化任务
+      module_name = get_module_name(args)
+      git_de, git_dv = get_git_info()
+      task_item.git_de = git_de
+      task_item.git_dv = git_dv
+
+      if write_db:
+          module_id = self.module_manager.find_module_id_by_name(module_name)
+          task_id = self.manager.add_task_base(module_id, current_user, git_de, git_dv, current_host)
+          task_item.task_id = task_id
+      else:
+          task_item.task_id = None  # 不生成数据库ID
+
+      task_item.clear_sim_logs()
+      self.logger.log("sim_logs cleared due to new compilation.", level="INFO")
       updated = True
 
-    # 更新时间戳和用户信息
-    task_item.comp_log_time = comp_log_mtime_str
-    task_item.current_user = current_user
-    task_item.current_host = current_host
+      # 添加 post
+      if task_item.status_post == "None":
+          corner_name = get_comp_corner(self.logger, comp_log_path)
+          if corner_name is not None:
+              if write_db:
+                  self.manager.update_task_post(task_item.task_id, corner_name)
+              task_item.status_post = corner_name
+          else:
+              task_item.status_post = "False"
+          updated = True
 
-    # 只在有更新时写入文件
-    if updated or True:
-      task_item.save_to_file(json_file_path)
-      self.logger.log(f"Task info updated and saved to '{json_file_path}'.", level="INFO")
-    return
+      # 更新时间戳和用户信息
+      task_item.comp_log_time = comp_log_mtime_str
+      task_item.current_user = current_user
+      task_item.current_host = current_host
+
+      # 只在有更新时写入文件
+      if updated or True:
+          task_item.save_to_file(json_file_path)
+          self.logger.log(f"Task info updated and saved to '{json_file_path}'.", level="INFO")
+      return task_item
+
+  def add_task(self, args, comp_file="comp.log", json_file="vcm_task_info.json"):
+    self._prepare_task_item(args, comp_file, json_file, write_db=True)
+
+  def add_task_only(self, args, comp_file="comp.log", json_file="vcm_task_info.json"):
+    """
+    只创建本地任务信息文件，不写入数据库。
+    """
+    self._prepare_task_item(args, comp_file, json_file, write_db=False)
+
+  def _foreach_regr_node(self, regr_items, handler):
+    """
+    遍历所有回归节点，调用 handler(user_name, work_name, node_dir, vcm_task_info_path, task_item, regr_item)
+    """
+    regr_item : RegrItem
+
+    for regr_item in regr_items:
+      user_name = regr_item.current_user
+      part_name = regr_item.part_name
+      part_mode = regr_item.part_mode
+      node_name = regr_item.node_name
+      work_name = regr_item.work_name
+
+      nodes_name = get_node_info(part_name, part_mode, node_name)
+      for node_item in nodes_name:
+        node_dir = "/" + node_item["host_name"]
+        vcm_task_info_path = os.path.join(
+          node_dir, "work", user_name, work_name, "regr", "vcm_task_info.json"
+        )
+        if not os.path.exists(vcm_task_info_path):
+          self.logger.log(f"{vcm_task_info_path} file not found.", level="ERROR")
+          continue
+        task_item = TaskItem.load_from_file(vcm_task_info_path)
+        handler(user_name, work_name, node_dir, vcm_task_info_path, task_item, regr_item)
 
   def update_task_regr_id(self, task_id, regr_id) -> None:
     """
@@ -125,45 +164,84 @@ class TaskService:
     if not regr_items:
       self.logger.log("No regression items found.", level="ERROR")
       return
-    
+
+    def handler(user_name, work_name, node_dir, vcm_task_info_path, task_item: TaskItem, regr_item: RegrItem):
+      task_id = task_item.task_id
+      if task_id is None:
+        self.logger.log(f"task_id not found in vcm_task_info.json.", level="ERROR")
+        return
+      self.manager.update_task_regr_id(task_id, True, regr_id)
+      self.logger.log(f"Task ID '{task_id}' updated with regr ID '{regr_id}'.", level="INFO")
+      regr_item.add_task(task_item)
+
     for regr_item in regr_items:
-      regr_id = regr_item.regr_id
-      user_name = regr_item.current_user
-
       regr_item.clear_tasks()
-
-      #part_name, part_mode, node_name, work_name = self.manager.get_regr_node_info(regr_id)
-      part_name = regr_item.part_name
-      part_mode = regr_item.part_mode
-      node_name = regr_item.node_name
-      work_name = regr_item.work_name
-
-      nodes_name = get_node_info(part_name, part_mode, node_name)
-
-      for node_item in nodes_name:
-        node_dir = "/" + node_item["host_name"]
-
-        vcm_task_info_path = os.path.join(
-          node_dir, "work", user_name, work_name, "regr", "vcm_task_info.json"
-        )
-        if not os.path.exists(vcm_task_info_path):
-          self.logger.log(f"{vcm_task_info_path} file not found.", level="ERROR")
-          return
-        
-        task_item = TaskItem.load_from_file(vcm_task_info_path)
-        task_id = task_item.task_id
-        
-        if task_id is None:
-          self.logger.log(f"task_id not found in vcm_task_info.json.", level="ERROR")
-          return
-        
-        self.manager.update_task_regr_id(task_id, True, regr_id)
-        self.logger.log(f"Task ID '{task_id}' updated with regr ID '{regr_id}'.", level="INFO")
-
-        regr_item.add_task(task_item)
+    self._foreach_regr_node(regr_items, handler)
+    for regr_item in regr_items:
       regr_list.update_regr(regr_item)
-        
     regr_list.save_to_file()
+
+  def commit_task_to_db(self, args, json_file="vcm_task_info.json"):
+    """
+    直接读取本地 vcm_task_info.json，解析并写入数据库。
+    """
+    json_file_path = os.path.join(os.getcwd(), json_file)
+    if not os.path.exists(json_file_path):
+      self.logger.log(f"{json_file_path} file not found.", level="ERROR")
+      return
+
+    task_item = TaskItem.load_from_file(json_file_path)
+    if not hasattr(task_item, "git_de") or not hasattr(task_item, "git_dv"):
+      self.logger.log(f"git_de or git_dv not found in {json_file_path}, please run create_task_only first.", level="ERROR")
+      return
+    if task_item.task_id is not None:
+      self.logger.log(f"Task already committed to database in {json_file_path}. Skipping.", level="INFO")
+      return
+
+    current_user = get_current_user()
+    current_host = get_current_host()
+    module_name = get_module_name(args)
+    module_id = self.module_manager.find_module_id_by_name(module_name)
+    if module_id is None:
+      self.logger.log(f"Module '{module_name}' not found in database.", level="ERROR")
+      return
+
+    task_id = self.manager.add_task_base(
+      module_id,
+      current_user,
+      task_item.git_de,
+      task_item.git_dv,
+      current_host
+    )
+    task_item.task_id = task_id
+    if getattr(task_item, "status_post", None) not in [None, "None", "False"]:
+      self.manager.update_task_post(task_id, task_item.status_post)
+    task_item.save_to_file(json_file_path)
+    self.logger.log(f"Task committed to database with task_id={task_id}, and updated '{json_file_path}'.", level="INFO")
+  
+  def commit_regr_task_to_db(self, args, part_name, part_mode, node_name, work_name):
+    """
+    根据回归参数解析目标 vcm_task_info.json 路径，并提交到数据库。
+    """
+    try:
+      node_infos = get_node_info(part_name, part_mode, node_name)
+    except ValueError as e:
+      self.logger.log(str(e), level="ERROR")
+      return False
+
+    current_user = get_current_user()
+    success = True
+
+    for node in node_infos:
+      node_dir = "/" + node["host_name"]
+      task_info_path = os.path.join(node_dir, "work", current_user, work_name, "regr", "vcm_task_info.json")
+      if not os.path.exists(task_info_path):
+        self.logger.log(f"{task_info_path} not found.", level="ERROR")
+        success = False
+        continue
+      # 调用已有的 commit_task_to_db 逻辑
+      self.commit_task_to_db(args, json_file=task_info_path)
+    return success
 
   def list_tasks(self, count=None):
     return self.manager.list_tasks(limit=count)
