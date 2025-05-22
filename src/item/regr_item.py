@@ -155,6 +155,17 @@ class RegrItem(BaseItem):
         return
     self.tasks.append(task)
 
+  def update_task(self, task):
+    """更新单个 task，支持 TaskItem 或 dict"""
+    if not isinstance(task, TaskItem):
+      task = TaskItem.from_dict(task)
+    # 避免重复（可按 task_id 唯一性）
+    for i, t in enumerate(self.tasks):
+      if t.task_id == task.task_id:
+        self.tasks[i] = task
+        return
+    self.tasks.append(task)
+
   def remove_task(self, task_id):
     """根据 task_id 移除 task"""
     self.tasks = [t for t in self.tasks if t.task_id != task_id]

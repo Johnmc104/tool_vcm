@@ -4,15 +4,28 @@
 import sqlite3
 from constants import VCM_DB_DEFAULT
 from contextlib import contextmanager
+#import pymysql
+from constants import MYSQL_EN, MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DB, VCM_DB_DEFAULT
 
 @contextmanager
 def db_connection(db_name=VCM_DB_DEFAULT):
-  conn = sqlite3.connect(db_name)
-  try:
-    yield conn
-  finally:
-    conn.commit()
-    conn.close()
+
+  if MYSQL_EN:
+    #conn = pymysql.connect(
+    #  host=MYSQL_HOST,
+    #  user=MYSQL_USER,
+    #  password=MYSQL_PASSWORD,
+    #  database=MYSQL_DB,
+    #  charset='utf8mb4'
+    #)
+    pass
+  else:
+    conn = sqlite3.connect(db_name)
+    try:
+      yield conn
+    finally:
+      conn.commit()
+      conn.close()
 
 # 初始化数据库并创建表
 def init_database(cursor):

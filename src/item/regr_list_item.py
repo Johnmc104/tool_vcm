@@ -46,7 +46,7 @@ class RegrListItem:
   def remove_regr(self, regr_id):
     self.regrs = [r for r in self.regrs if r.regr_id != regr_id]
 
-  def update_regr(self, regr_item):
+  def update_regr(self, regr_item: RegrItem):
     for idx, r in enumerate(self.regrs):
       if r.regr_id == regr_item.regr_id:
         self.regrs[idx] = regr_item
@@ -54,3 +54,6 @@ class RegrListItem:
 
   def get_regrs(self):
     return self.regrs
+  
+  def set_regrs(self, regrs):
+    self.regrs = regrs

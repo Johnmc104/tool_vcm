@@ -63,3 +63,9 @@ VCM_REGR_FILENAME = "vcm_regr_info.json"
 
 REMOTE_EN = False
 REMOTE_API_URL = "http://example.com/api"
+
+MYSQL_EN = False
+MYSQL_HOST = "localhost"
+MYSQL_USER = "root"
+MYSQL_PASSWORD = "password"
+MYSQL_DB = "vcm_db"

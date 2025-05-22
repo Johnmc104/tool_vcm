@@ -11,53 +11,41 @@ from utils.utils_log import Logger
 def get_regr_log_name(status_log_path = "status.log", reg_info_log_path = "log/reg_info.log"):
   merged_data = []
 
-  # 检查 status.log 文件是否存在
   if not os.path.exists(status_log_path):
     print(f"[VCM] Error: File '{status_log_path}' not found.")
     return []
-  # 检查 reg_info.log 文件是否存在
   if not os.path.exists(reg_info_log_path):
     print(f"[VCM] Error: File '{reg_info_log_path}' not found.")
     return []
 
   # 读取 status.log 文件
-  status_data = {}
+  status_data = []
   with open(status_log_path, 'r') as status_file:
     for line in status_file:
       parts = line.strip().split()
       if len(parts) == 3 and parts[0] == "job":
         _, job_id, case_name = parts
-        status_data[job_id] = case_name
+        status_data.append((job_id, case_name))
 
-  # 读取 reg_info.log 文件并检查行数
+  # 读取 reg_info.log 文件
   reg_info_data = []
   with open(reg_info_log_path, 'r') as reg_info_file:
     for line in reg_info_file:
       parts = line.strip().split()
-      if len(parts) == 2:  # 只包含 case_name 和 case_seed
+      if len(parts) == 2:
         case_name, case_seed = parts
         reg_info_data.append((case_name, case_seed))
 
-  # 检查两个文件的行数
+  # 合并数据，确保唯一性
   if len(status_data) != len(reg_info_data):
     print(f"[VCM] Error: The number of lines in '{status_log_path}' and '{reg_info_log_path}' do not match.")
-    print(f"[VCM] status.log lines: {len(status_data)}, reg_info.log lines: {len(reg_info_data)}")
-    return []
- 
-  # 检查 case_name 是否一一对应
-  case_names_status = set(status_data.values())
-  case_names_reg_info = {case for case, _ in reg_info_data}
-
-  if case_names_status != case_names_reg_info:
-    print(f"[VCM] Error: Case names in '{status_log_path}' and '{reg_info_log_path}' do not match.")
     return []
 
-  # 合并数据
-  for case_name, case_seed in reg_info_data:
-    if case_name in status_data.values():  # 检查 case 是否在 status_data 中
-      job_id = next((jid for jid, cname in status_data.items() if cname == case_name), None)
-      if job_id:
-        merged_data.append((job_id, case_name, case_seed))
+  for ((job_id, case_name), (case_name2, case_seed)) in zip(status_data, reg_info_data):
+    if case_name != case_name2:
+      print(f"[VCM] Error: Mismatch between status.log and reg_info.log: {case_name} vs {case_name2}")
+      return []
+    merged_data.append((job_id, case_name, case_seed))
 
   return merged_data
 
