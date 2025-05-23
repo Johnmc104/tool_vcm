@@ -11,8 +11,17 @@
             padding: 0 30px;
             height: 48px;
             align-items: center;
-            white-space: nowrap;   /* 防止换行 */
-            overflow-x: auto;      /* 超出时横向滚动 */
+            white-space: nowrap;
+            overflow-x: auto;
+        }
+        .nav-left {
+            display: flex;
+            align-items: center;
+        }
+        .nav-right {
+            display: flex;
+            align-items: center;
+            margin-left: auto;
         }
         nav a {
             color: #fff;
@@ -21,11 +30,10 @@
             font-size: 18px;
             padding: 0 8px;
             transition: color 0.2s;
-            white-space: nowrap;   /* 防止单个菜单项换行 */
+            white-space: nowrap;
         }
-        nav a:hover {
-            color: #ffd04b;
-        }
+        nav a:last-child { margin-right: 0; }
+        nav a:hover { color: #ffd04b; }
         .container {
             max-width: 1100px;
             margin: 32px auto;
@@ -34,7 +42,46 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.07);
             padding: 32px;
         }
-        h2 { color: #2d3e50; }
+        /* 首页统计卡片样式 */
+        .dashboard {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+            justify-content: flex-start;
+        }
+        .project-card {
+            background: #f8fafc;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            padding: 24px 32px;
+            min-width: 260px;
+            margin-bottom: 16px;
+            flex: 1 1 260px;
+            transition: box-shadow 0.2s;
+        }
+        .project-card:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.13);
+        }
+        .project-title {
+            font-size: 22px;
+            color: #2d3e50;
+            margin-bottom: 16px;
+            font-weight: bold;
+        }
+        .stats-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .stats-list li {
+            font-size: 16px;
+            margin-bottom: 8px;
+            color: #444;
+        }
+        .stats-label {
+            color: #888;
+            margin-right: 8px;
+        }
         .table-responsive {
             overflow-x: auto;
             width: 100%;
@@ -104,12 +151,17 @@
 </head>
 <body>
     <nav>
-        <a href="/projects">Project</a>
-        <a href="/modules">Module</a>
-        <a href="/cases">Case</a>
-        <a href="/regrs">Regr</a>
-        <a href="/tasks">Task</a>
-        <a href="/sims">Sim</a>
+        <div class="nav-left">
+            <a href="/">首页</a>
+        </div>
+        <div class="nav-right">
+            <a href="/projects">Project</a>
+            <a href="/modules">Module</a>
+            <a href="/cases">Case</a>
+            <a href="/regrs">Regr</a>
+            <a href="/tasks">Task</a>
+            <a href="/sims">Sim</a>
+        </div>
     </nav>
     <div class="container">
         {% block content %}{% endblock %}

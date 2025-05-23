@@ -64,3 +64,49 @@ def sims():
     sims = cursor.fetchall()
     conn.close()
     return render_template('sims.html', sims=sims)
+
+@main_routes.route('/')
+def home():
+    conn = sqlite3.connect(get_db_path())
+    cursor = conn.cursor()
+    cursor.execute("SELECT project_id, project_name FROM projects")
+    projects = cursor.fetchall()
+    project_stats = []
+    for project in projects:
+        project_id, project_name = project
+        cursor.execute("SELECT COUNT(*) FROM modules WHERE project_id=?", (project_id,))
+        module_count = cursor.fetchone()[0]
+        cursor.execute("""
+            SELECT COUNT(*) FROM case_info 
+            WHERE module_id IN (SELECT module_id FROM modules WHERE project_id=?)
+        """, (project_id,))
+        case_count = cursor.fetchone()[0]
+        cursor.execute("""
+            SELECT COUNT(*) FROM regr_info 
+            WHERE module_id IN (SELECT module_id FROM modules WHERE project_id=?)
+        """, (project_id,))
+        regr_count = cursor.fetchone()[0]
+        cursor.execute("""
+            SELECT COUNT(*) FROM tasks 
+            WHERE module_id IN (SELECT module_id FROM modules WHERE project_id=?)
+        """, (project_id,))
+        task_count = cursor.fetchone()[0]
+        cursor.execute("""
+            SELECT COUNT(*) FROM sim_info 
+            WHERE task_id IN (
+                SELECT task_id FROM tasks 
+                WHERE module_id IN (SELECT module_id FROM modules WHERE project_id=?)
+            )
+        """, (project_id,))
+        sim_count = cursor.fetchone()[0]
+        project_stats.append({
+            'name': project_name,
+            'module_count': module_count,
+            'case_count': case_count,
+            'regr_count': regr_count,
+            'task_count': task_count,
+            'sim_count': sim_count,
+        })
+    conn.close()
+    return render_template('home.html', projects=project_stats)
+

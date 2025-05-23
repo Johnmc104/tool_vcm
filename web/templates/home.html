@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>项目总览</h2>
+<table>
+    <thead>
+        <tr>
+            <th>项目名称</th>
+            <th>Module 数量</th>
+            <th>Case 数量</th>
+            <th>Regr 数量</th>
+            <th>Task 数量</th>
+            <th>Sim 数量</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for project in projects %}
+        <tr>
+            <td>{{ project.name }}</td>
+            <td>{{ project.module_count }}</td>
+            <td>{{ project.case_count }}</td>
+            <td>{{ project.regr_count }}</td>
+            <td>{{ project.task_count }}</td>
+            <td>{{ project.sim_count }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
