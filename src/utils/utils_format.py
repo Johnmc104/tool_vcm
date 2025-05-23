@@ -3,6 +3,7 @@ from collections import defaultdict
 from item.regr_list_item import RegrListItem
 from item.regr_item import RegrItem
 from item.task_item import TaskItem
+import os
 
 def fetch_with_headers(cursor, sql, params=()):
   """
@@ -266,9 +267,35 @@ def print_regr_case_status(regr_list_item: RegrListItem):
 
     print_table(headers, rows)
 
+    fail_case_names = []
+
     # show fail case name, and log_path
     for t in tasks:
       logs = t.get_sim_logs()
       for sim in logs:
         if getattr(sim, "sim_result", "") == "Fail":
           print(f"  [Fail] sim{sim.sim_id}: {sim.case_name} - {sim.case_seed} - {sim.sim_log}")
+          fail_case_names.append(str(sim.case_name))
+
+    # fail_case_names 去重
+    fail_case_names = list(sorted(set(fail_case_names)))
+
+    # 检查当前或上一级目录是否存在regr_cfg文件夹
+    def get_regr_cfg_dir():
+      cur_dir = os.getcwd()
+      cur_path = os.path.join(cur_dir, "regr_cfg")
+      parent_path = os.path.join(os.path.dirname(cur_dir), "regr_cfg")
+      if os.path.isdir(cur_path):
+        return cur_path
+      elif os.path.isdir(parent_path):
+        return parent_path
+      else:
+        return cur_dir  # 默认写到当前目录
+
+    target_dir = get_regr_cfg_dir()
+    case_fail_path = os.path.join(target_dir, "case_fail.list")
+    if fail_case_names:
+      with open(case_fail_path, "w") as f:
+        for name in fail_case_names:
+          f.write(f"{name}\n")
+        f.write("\n")  # 最后一行空行
