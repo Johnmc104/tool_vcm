@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Module 列表</h2>
+<table>
+  <tr>
+    <th>ID</th>
+    <th>模块名称</th>
+    <th>项目ID</th>
+    <th>创建时间</th>
+    <th>创建者</th>
+  </tr>
+  {% for m in modules %}
+  <tr>
+    <td>{{ m[0] }}</td>
+    <td>{{ m[1] }}</td>
+    <td>{{ m[2] }}</td>
+    <td>{{ m[3] }}</td>
+    <td>{{ m[4] }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Sim 列表</h2>
+<table>
+  <tr>
+    <th>ID</th>
+    <th>用例ID</th>
+    <th>任务ID</th>
+    <th>Seed</th>
+    <th>Job ID</th>
+    <th>是否检查</th>
+    <th>仿真时间</th>
+    <th>错误数</th>
+    <th>Timing数</th>
+    <th>是否通过</th>
+    <th>创建时间</th>
+    <th>创建者</th>
+  </tr>
+  {% for s in sims %}
+  <tr>
+    <td>{{ s[0] }}</td>
+    <td>{{ s[1] }}</td>
+    <td>{{ s[2] }}</td>
+    <td>{{ s[3] }}</td>
+    <td>{{ s[4] }}</td>
+    <td>{{ s[5] }}</td>
+    <td>{{ s[6] }}</td>
+    <td>{{ s[7] }}</td>
+    <td>{{ s[8] }}</td>
+    <td>{{ s[9] }}</td>
+    <td>{{ s[10] }}</td>
+    <td>{{ s[11] }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endblock %}

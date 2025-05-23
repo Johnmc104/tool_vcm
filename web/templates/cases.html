@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Case 列表</h2>
+<table>
+  <tr>
+    <th>ID</th>
+    <th>模块ID</th>
+    <th>用例名</th>
+    <th>中文名</th>
+    <th>分组</th>
+    <th>创建时间</th>
+    <th>创建者</th>
+  </tr>
+  {% for c in cases %}
+  <tr>
+    <td>{{ c[0] }}</td>
+    <td>{{ c[1] }}</td>
+    <td>{{ c[2] }}</td>
+    <td>{{ c[3] }}</td>
+    <td>{{ c[4] }}</td>
+    <td>{{ c[5] }}</td>
+    <td>{{ c[6] }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endblock %}

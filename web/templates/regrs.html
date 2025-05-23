@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Regr 列表</h2>
+<div class="table-responsive">
+<table>
+  <tr>
+    <th>ID</th>
+    <th>模块ID</th>
+    <th>基线</th>
+    <th>类型</th>
+    <th>部件名</th>
+    <th>模式</th>
+    <th>节点名</th>
+    <th>工作名</th>
+    <th>工作URL</th>
+    <th>用例列表</th>
+    <th>创建时间</th>
+    <th>创建者</th>
+  </tr>
+  {% for r in regrs %}
+  <tr>
+    <td>{{ r[0] }}</td>
+    <td>{{ r[1] }}</td>
+    <td>{{ r[2] }}</td>
+    <td>{{ r[3] }}</td>
+    <td>{{ r[4] }}</td>
+    <td>{{ r[5] }}</td>
+    <td>{{ r[6] }}</td>
+    <td>{{ r[7] }}</td>
+    <td>
+      <span class="cell-ellipsis" data-fulltext="{{ r[8] }}">
+        {{ r[8][:24] ~ ('...' if r[8]|length > 24 else '') }}
+        <span class="popup-fulltext">
+          {{ r[8] }}
+          <button class="copy-btn" type="button">复制</button>
+        </span>
+      </span>
+    </td>
+    <td>
+      <span class="cell-ellipsis" data-fulltext="{{ r[9] }}">
+        {{ r[9][:24] ~ ('...' if r[9]|length > 24 else '') }}
+        <span class="popup-fulltext">
+          {{ r[9] }}
+          <button class="copy-btn" type="button">复制</button>
+        </span>
+      </span>
+    </td>
+    <td>{{ r[10] }}</td>
+    <td>{{ r[11] }}</td>
+  </tr>
+  {% endfor %}
+</table>
+</div>
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Task 列表</h2>
+<div class="table-responsive">
+<table>
+  <tr>
+    <th>ID</th>
+    <th>模块ID</th>
+    <th>Git DE</th>
+    <th>Git DV</th>
+    <th>是否回归</th>
+    <th>回归ID</th>
+    <th>节点名</th>
+    <th>是否Post</th>
+    <th>角点名</th>
+    <th>创建时间</th>
+    <th>创建者</th>
+  </tr>
+  {% for t in tasks %}
+  <tr>
+    <td>{{ t[0] }}</td>
+    <td>{{ t[1] }}</td>
+    <td>
+      <span class="cell-ellipsis" data-fulltext="{{ t[2] }}">
+        {{ t[2][:24] ~ ('...' if t[2]|length > 24 else '') }}
+        <span class="popup-fulltext">
+          {{ t[2] }}
+          <button class="copy-btn" type="button">复制</button>
+        </span>
+      </span>
+    </td>
+    <td>
+      <span class="cell-ellipsis" data-fulltext="{{ t[3] }}">
+        {{ t[3][:24] ~ ('...' if t[3]|length > 24 else '') }}
+        <span class="popup-fulltext">
+          {{ t[3] }}
+          <button class="copy-btn" type="button">复制</button>
+        </span>
+      </span>
+    </td>
+    <td>{{ t[4] }}</td>
+    <td>{{ t[5] }}</td>
+    <td>{{ t[6] }}</td>
+    <td>{{ t[7] }}</td>
+    <td>{{ t[8] }}</td>
+    <td>{{ t[9] }}</td>
+    <td>{{ t[10] }}</td>
+  </tr>
+  {% endfor %}
+</table>
+</div>
+{% endblock %}
