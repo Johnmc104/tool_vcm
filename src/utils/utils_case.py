@@ -42,7 +42,7 @@ def find_case_sw_info(case_name):
       file_path = os.path.join(root, f"{case_name}.sv")
       with open(file_path, "r") as f:
         content = f.read()
-      class_matchs = re.findall(r"^\s*class\s+(\w+)\s+extends", content)
+      class_matchs = re.findall(r"^\s*class\s+(\w+)\s+extends", content, re.MULTILINE)
       params_match = re.search(r'dpi_get_bin\("([^"]*)".*?"([^"]*)"', content)
       if not class_matchs:
         print(f"[VCM] Error, class definition not found in file: {file_path}")
@@ -54,6 +54,7 @@ def find_case_sw_info(case_name):
       case_c_name = params_match.group(2) if params_match else None
       print(f"[VCM] Group_Name: {group_name}, Case_Name: {case_c_name}")
       return group_name, case_c_name
+  print(f"[VCM] Error, {case_name}.sv not found in {target_dir}")
   return None, None
 
 def find_case_hw_info(file_path: str = "sim.log"):
