@@ -39,13 +39,14 @@ class SimCLI:
       },
       "list": {
         "help": "Fetch simulation records.",
-        "usage": "%(prog)s <case_name> [--module_name MODULE_NAME] [--project_name PROJECT_NAME] [--user CREATED_BY]",
+        "usage": "%(prog)s <case_name> [--module_name MODULE_NAME] [--project_name PROJECT_NAME] [-user CREATED_BY]",
         "arguments": [
           ("case_name", "Name of the case", {"nargs": "?"}),
           ("--module_name", "Name of the module", {"nargs": "?"}),
           ("--project_name", "Name of the project", {"nargs": "?"}),
           ("--user", "Name of the creator", {"nargs": "?"}),
-          ("--output", "Output format (console or html)", {"choices": ["console", "html"], "default": "console"})
+          ("--output", "Output format (console or html)", {"choices": ["console", "html"], "default": "console"}),
+          ("--limit", "Limit the number of records", {"type": int, "default": None}),
         ]
       }
     }

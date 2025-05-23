@@ -20,97 +20,97 @@ class TaskService:
     self.module_manager = ModuleManager(cursor)
 
   def _prepare_task_item(self, args, comp_file, json_file, write_db=False):
-      status_log = rm_vcm_fail_file("vcm.comp.fail")
-      json_file_path = os.path.join(os.getcwd(), json_file)
-      current_dir_name = os.path.basename(os.getcwd())
-      current_user = get_current_user()
-      current_host = get_current_host()
-
-      # 检查当前目录
-      if not (current_dir_name.startswith("sim_pre") or current_dir_name.startswith("sim_post") or current_dir_name.startswith("regr")):
-          self.logger.log("Current directory must be sim_pre, sim_post, or regr.", level="ERROR")
-          return None
-
-      # 用 TaskItem 读取或初始化
-      task_item = TaskItem.load_from_file(json_file_path)
-
-      if current_dir_name.startswith("regr"):
-          task_item.status_regr = "True"
+    status_log = rm_vcm_fail_file("vcm.comp.fail")
+    json_file_path = os.path.join(os.getcwd(), json_file)
+    current_dir_name = os.path.basename(os.getcwd())
+    current_user = get_current_user()
+    current_host = get_current_host()
+  
+    # 检查当前目录
+    if not (current_dir_name.startswith("sim_pre") or current_dir_name.startswith("sim_post") or current_dir_name.startswith("regr")):
+      self.logger.log("Current directory must be sim_pre, sim_post, or regr.", level="ERROR")
+      return None
+  
+    # 用 TaskItem 读取或初始化
+    task_item = TaskItem.load_from_file(json_file_path)
+  
+    # comp.log 路径
+    comp_log_path = os.path.join(os.getcwd(), comp_file)
+    if not os.path.exists(comp_log_path):
+      self.logger.log(f"comp.log file not found at '{comp_log_path}'.", level="ERROR")
+      return None
+    else:
+      comp_result = check_comp_result(self.logger, comp_log_path)
+      if comp_result is False:
+        task_item.status_check = "False"
+        add_vcm_fail_file(status_log, "Error: comp.log file does not contain valid compilation result.")
+        return None
       else:
-          task_item.status_regr = "False"
-
-      # comp.log 路径
-      comp_log_path = os.path.join(os.getcwd(), comp_file)
-      if not os.path.exists(comp_log_path):
-          self.logger.log(f"comp.log file not found at '{comp_log_path}'.", level="ERROR")
-          return None
-      else:
-          comp_result = check_comp_result(self.logger, comp_log_path)
-          if comp_result is False:
-              task_item.status_check = "False"
-              add_vcm_fail_file(status_log, "Error: comp.log file does not contain valid compilation result.")
-              return None
-          else:
-              task_item.status_check = "True"
-
-      # 跳过未变更
-      comp_log_mtime_str = datetime.datetime.fromtimestamp(
-          os.path.getmtime(comp_log_path)
-      ).strftime('%Y-%m-%d %H:%M:%S')
-
-      comp_log_changed = (
-          task_item.comp_log_time != comp_log_mtime_str or
-          task_item.current_user != current_user or
-          task_item.current_host != current_host
-      )
-
-      if (
-          not comp_log_changed and
-          task_item.task_id is not None
-      ):
-          self.logger.log("comp.log has not changed and task already added by this user/host. Skipping.", level="INFO")
-          return None
-
-      updated = False
-
-      # 初始化任务
-      module_name = get_module_name(args)
-      git_de, git_dv = get_git_info()
-      task_item.git_de = git_de
-      task_item.git_dv = git_dv
-
+        task_item.status_check = "True"
+  
+    # 跳过未变更
+    comp_log_mtime_str = datetime.datetime.fromtimestamp(
+      os.path.getmtime(comp_log_path)
+    ).strftime('%Y-%m-%d %H:%M:%S')
+  
+    comp_log_changed = (
+      task_item.comp_log_time != comp_log_mtime_str or
+      task_item.current_user != current_user or
+      task_item.current_host != current_host
+    )
+  
+    if (
+      not comp_log_changed and
+      task_item.task_id is not None
+    ):
+      self.logger.log("comp.log has not changed and task already added by this user/host. Skipping.", level="INFO")
+      return None
+  
+    # 初始化任务
+    module_name = get_module_name(args)
+    git_de, git_dv = get_git_info()
+    task_item.git_de = git_de
+    task_item.git_dv = git_dv
+  
+    if write_db:
+      module_id = self.module_manager.find_module_id_by_name(module_name)
+      task_id = self.manager.add_task_base(module_id, current_user, git_de, git_dv, current_host)
+      task_item.task_id = task_id
+    else:
+      task_item.task_id = None  # 不生成数据库ID
+  
+    task_item.clear_sim_logs()
+    self.logger.log("sim_logs cleared due to new compilation.", level="INFO")
+  
+    # 添加回归 ID
+    if current_dir_name.startswith("regr"):
+      self.logger.log("Current directory is 'regr'. ", level="INFO")
+      task_item.status_regr = "True"
+    else:
+      self.logger.log("Current directory is not 'regr'. ", level="INFO")
       if write_db:
-          module_id = self.module_manager.find_module_id_by_name(module_name)
-          task_id = self.manager.add_task_base(module_id, current_user, git_de, git_dv, current_host)
-          task_item.task_id = task_id
-      else:
-          task_item.task_id = None  # 不生成数据库ID
+        self.manager.update_task_regr_flag(task_item.task_id, False)
+      task_item.status_regr = "False"
 
-      task_item.clear_sim_logs()
-      self.logger.log("sim_logs cleared due to new compilation.", level="INFO")
-      updated = True
-
-      # 添加 post
-      if task_item.status_post == "None":
-          corner_name = get_comp_corner(self.logger, comp_log_path)
-          if corner_name is not None:
-              if write_db:
-                  self.manager.update_task_post(task_item.task_id, corner_name)
-              task_item.status_post = corner_name
-          else:
-              task_item.status_post = "False"
-          updated = True
-
-      # 更新时间戳和用户信息
-      task_item.comp_log_time = comp_log_mtime_str
-      task_item.current_user = current_user
-      task_item.current_host = current_host
-
-      # 只在有更新时写入文件
-      if updated or True:
-          task_item.save_to_file(json_file_path)
-          self.logger.log(f"Task info updated and saved to '{json_file_path}'.", level="INFO")
-      return task_item
+    # 添加 post
+    corner_name = get_comp_corner(self.logger, comp_log_path)
+    if corner_name is not None:
+      self.logger.log(f"Post corner name: {corner_name}, will update to db", level="INFO")
+      if write_db:
+        self.manager.update_task_post(task_item.task_id, corner_name)
+      task_item.status_post = corner_name
+    else:
+      task_item.status_post = "False"
+  
+    # 更新时间戳和用户信息
+    task_item.comp_log_time = comp_log_mtime_str
+    task_item.current_user = current_user
+    task_item.current_host = current_host
+  
+    #写入文件
+    task_item.save_to_file(json_file_path)
+    self.logger.log(f"Task info updated and saved to '{json_file_path}'.", level="INFO")
+    return task_item
 
   def add_task(self, args, comp_file="comp.log", json_file="vcm_task_info.json"):
     self._prepare_task_item(args, comp_file, json_file, write_db=True)

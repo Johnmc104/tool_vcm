@@ -129,9 +129,9 @@ class SimManager:
     self.cursor.execute('SELECT * FROM sim_info')
     return self.cursor.fetchall()
 
-  def query_sim_info(self, case_name=None, project_name=None, module_name=None, user=None):
+  def query_sim_info(self, case_name=None, project_name=None, module_name=None, user=None, limit=None):
     """
-    根据用例名、项目名、模块名或用户查询仿真信息
+    根据用例名、项目名、模块名或用户查询仿真信息，按 sim_id 从高到低排序，可选数量限制
     """
     query = '''
       SELECT sim_info.* FROM sim_info
@@ -142,18 +142,20 @@ class SimManager:
     '''
     params = []
     if project_name:
-        query += ' AND projects.project_name = ?'
-        params.append(project_name)
+      query += ' AND projects.project_name = ?'
+      params.append(project_name)
     elif module_name:
-        query += ' AND modules.module_name = ?'
-        params.append(module_name)
+      query += ' AND modules.module_name = ?'
+      params.append(module_name)
     elif user:
-        query += ' AND sim_info.created_by = ?'
-        params.append(user)
+      query += ' AND sim_info.created_by = ?'
+      params.append(user)
     else:
-        raise ValueError("必须提供 project_name、module_name 或 user 其中之一。")
+      raise ValueError("必须提供 project_name、module_name 或 user 其中之一。")
     if case_name:
-        query += ' AND case_info.case_name = ?'
-        params.append(case_name)
+      query += ' AND case_info.case_name = ?'
+      params.append(case_name)
+    query += ' ORDER BY sim_info.sim_id DESC'
+    if limit is not None:
+      query += f' LIMIT {int(limit)}'
     return fetch_with_headers(self.cursor, query, tuple(params))
-

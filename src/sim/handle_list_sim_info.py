@@ -30,8 +30,18 @@ def handle_list_sim_info(cursor, args):
     if case_manager.exist_case(args.case_name, module_id) is False:
       print(f"[VCM] Error: Case '{args.case_name}' does not exist under module '{module_name}'.")
       return
+    
+  #check limit
+  if args.limit is None:
+    limit = None
+  else:
+    try:
+      limit = int(args.limit)
+    except ValueError:
+      print("[VCM] Error: Limit must be an integer.")
+      return
 
-  rows, headers = sim_manager.query_sim_info(args.case_name, project_name, module_name, sim_user)
+  rows, headers = sim_manager.query_sim_info(args.case_name, project_name, module_name, sim_user, limit)
 
   if rows:
     table = [list(row) for row in rows]
