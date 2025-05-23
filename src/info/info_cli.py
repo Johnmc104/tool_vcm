@@ -63,6 +63,14 @@ class InfoCLI:
         "arguments": [
           ("module_name", "Module name", {"nargs": "?"})
         ]
+      },
+      "find_sw":{
+        "help": "find software info.",
+        "usage": "%(prog)s <case_name> [module_name]",
+        "arguments": [
+          ("case_name", "Name of the case"),
+          ("module_name", "Name of the module", {"nargs": "?"})
+        ]
       }
     }
 
@@ -96,5 +104,7 @@ class InfoCLI:
         print(f"[VCM] Job ID: {job_id}, Status: '{status}', Node: '{node_name}'")
     elif args.subcommand == "regrlist":
       self.service._handle_regrlist(args)
+    elif args.subcommand == "find_sw":
+      self.service._handle_find_sw(args)
     else:
       print("[VCM] Unknown command. Use '-h' for help.")

@@ -124,4 +124,41 @@ class InfoService:
       return
     
     print_regr_case_status(regr_list)
+
+  def _handle_find_sw(self, args):
+    
+    # check case_name
+    if args.case_name is not None:
+      case_name = args.case_name
+    else:
+      print("[VCM] Error: Case name is required.")
+
+    # check module_name, if not provided, get from git
+    module_name = get_module_name(args)
+    if not module_name:
+      print("[VCM] Error: Module name is required.")
+      return
+
+    module_id = self.module_manager.find_module_id_by_name(module_name)
+    if not module_id:
+      print(f"[VCM] Error: Module '{module_name}' does not exist.")
+      return
+    
+    # Check if the case exists in the database
+    if self.case_manager.exist_case(case_name, module_id) is False:
+      print(f"[VCM] Error: Case '{case_name}' not found in module '{module_name}'.")
+      return
+    else:
+      case_id = self.case_manager.find_case_id_by_module_id(case_name, module_id)
+      if not case_id:
+        print(f"[VCM] Error: Case ID for '{case_name}' not found.")
+        return
+      
+    group_name, case_c_name = find_case_sw_info(case_name)
+    if not group_name or not case_c_name:
+      print(f"[VCM] Warning: Case '{case_name}' not found in case_info.")
+      return
+    else:
+      self.case_manager.update_case_st(case_id, group_name, case_c_name)
+      print(f"[VCM] Software group name: {group_name}, case name: {case_c_name}")
     
