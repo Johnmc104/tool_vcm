@@ -73,7 +73,7 @@ class InfoService:
           print(f"[VCM] Warning: Case '{case_name}' not found in case_info.")
           continue
         else:
-          self.case_manager.update_case_st(case_id, group_name, case_c_name)
+          self.case_manager.update_case_st(case_id, case_c_name, group_name)
         print(f"[VCM] Case '{case_name}' added under module '{module_name}'.")
 
   def _handle_emclist(self, args):
@@ -159,6 +159,6 @@ class InfoService:
       print(f"[VCM] Warning: Case '{case_name}' not found in case_info.")
       return
     else:
-      self.case_manager.update_case_st(case_id, group_name, case_c_name)
+      self.case_manager.update_case_st(case_id, case_c_name, group_name)
       print(f"[VCM] Software group name: {group_name}, case name: {case_c_name}")
     

@@ -59,7 +59,7 @@ def handle_add_basic_single(cursor, logger:Logger, args):
       logger.log(f"Case '{case_name}' not found in case_info.", level="ERROR")
       return
     else:
-      case_manager.update_case_st(case_id, group_name, case_c_name)
+      case_manager.update_case_st(case_id, case_c_name, group_name)
     logger.log(f"Case '{case_name}' added under module '{module_name}'.", level="INFO")
 
   # 读取/初始化 vcm_task_info.json 的 sim_logs
