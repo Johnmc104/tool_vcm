@@ -28,7 +28,7 @@ def print_tasks_table(cursor, tasks):
       except Exception:
         return str(row[2]) if row[2] is not None else ""
     elif i == 6 or i == 9:
-      return "✔" if row[i] else "X"
+      return "✔" if row[i] in (1, True) else "X"
     else:
       return str(row[i]) if row[i] is not None else ""
 

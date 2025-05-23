@@ -83,7 +83,7 @@ class TaskCLI:
         return
       
       if args.task_id is None and args.regr_id is None:
-        self.service.update_task_regr_id(args.task_id, args.regr_id)
+        self.service.update_task_regr_id()
       else:
         self.manager.update_task_regr_id(args.task_id, False, args.regr_id)
     elif args.subcommand == 'list':

@@ -59,6 +59,17 @@ class TaskManager(BaseManager):
       WHERE task_id = ?
     ''', (is_regr, task_id))
 
+  def update_task_post_flag(self, task_id: int, is_post: bool) -> None:
+    """
+    更新任务的 post 标志。
+    ...
+    """
+    self.cursor.execute('''
+      UPDATE tasks
+      SET is_post = ?
+      WHERE task_id = ?
+    ''', (is_post, task_id))
+
   def list_tasks(self, limit: Optional[int] = None) -> List[Any]:
     """
     获取任务列表，按 task_id 降序排列。

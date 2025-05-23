@@ -52,7 +52,7 @@ def print_cases_table(cursor, cases):
       except Exception:
         return str(row[2]) if row[2] is not None else ""
     elif i in [7, 8, 9, 10, 11]:
-      return "✔" if row[i] else "X"
+      return "✔" if row[i] in (1, True) else "X"
     else:
       return str(row[i]) if row[i] is not None else ""
 

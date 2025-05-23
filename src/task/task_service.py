@@ -100,6 +100,9 @@ class TaskService:
         self.manager.update_task_post(task_item.task_id, corner_name)
       task_item.status_post = corner_name
     else:
+      self.logger.log("Post corner name not found, setting status_post to 'False'.", level="INFO")
+      if write_db:
+        self.manager.update_task_post_flag(task_item.task_id, False)
       task_item.status_post = "False"
   
     # 更新时间戳和用户信息
@@ -146,7 +149,7 @@ class TaskService:
         task_item = TaskItem.load_from_file(vcm_task_info_path)
         handler(user_name, work_name, node_dir, vcm_task_info_path, task_item, regr_item)
 
-  def update_task_regr_id(self, task_id, regr_id) -> None:
+  def update_task_regr_id(self) -> None:
     """
     更新任务的回归 ID。
     ...
@@ -166,6 +169,7 @@ class TaskService:
       return
 
     def handler(user_name, work_name, node_dir, vcm_task_info_path, task_item: TaskItem, regr_item: RegrItem):
+      regr_id = regr_item.regr_id
       task_id = task_item.task_id
       if task_id is None:
         self.logger.log(f"task_id not found in vcm_task_info.json.", level="ERROR")
